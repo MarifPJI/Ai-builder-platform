@@ -1,0 +1,28 @@
+# Jangan salin artefak/berkas yang tidak diperlukan ke dalam build context.
+node_modules
+.next
+.git
+.gitignore
+npm-debug.log*
+
+# Env & secret — JANGAN pernah masuk image. Konfigurasi dibaca dari env ECS.
+.env
+.env*.local
+.env.production
+.env.production.local
+
+# Dokumentasi & spec tidak diperlukan di runtime.
+docs
+.kiro
+tests
+coverage
+
+# Berkas dev lain
+*.md
+.vscode
+.DS_Store
+tsconfig.tsbuildinfo
+next-env.d.ts
+
+# CATATAN: certs/rds-global-bundle.pem SENGAJA TIDAK diabaikan — diperlukan
+# runtime untuk verifikasi TLS RDS. (Pola di atas tidak mencakup certs/.)

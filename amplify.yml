@@ -1,0 +1,29 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+    build:
+      commands:
+        # ── Wiring env vars ke SSR runtime (Amplify Next.js compute) ──────────
+        # Amplify menyediakan environment variables saat BUILD, tetapi compute
+        # SSR Next.js TIDAK otomatis mewariskan variabel non-NEXT_PUBLIC_ ke
+        # RUNTIME. Pola resmi: tulis variabel yang dibutuhkan server ke berkas
+        # `.env.production` sebelum `next build`, sehingga ter-embed untuk runtime
+        # Server Actions/Route Handlers. Variabel ini TETAP sisi server (bukan
+        # NEXT_PUBLIC_), jadi tidak terekspos ke klien browser.
+        - env | grep -E '^APP_AWS_REGION=' >> .env.production || true
+        - env | grep -E '^COGNITO_USER_POOL_ID=' >> .env.production || true
+        - env | grep -E '^COGNITO_CLIENT_ID=' >> .env.production || true
+        - env | grep -E '^COGNITO_CLIENT_SECRET=' >> .env.production || true
+        - env | grep -E '^DATABASE_URL=' >> .env.production || true
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*

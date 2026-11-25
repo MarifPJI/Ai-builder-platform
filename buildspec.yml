@@ -1,0 +1,42 @@
+version: 0.2
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AWS CodeBuild — membangun image Docker Next.js (standalone) dan mendorongnya
+# ke Amazon ECR. Dipakai untuk deployment ECS Fargate (DB privat, #3).
+#
+# Variabel lingkungan yang HARUS diset di project CodeBuild:
+#   AWS_ACCOUNT_ID  : ID akun AWS (mis. 548171706416)
+#   AWS_DEFAULT_REGION : ap-southeast-1
+#   ECR_REPO_NAME   : nama repo ECR (mis. ai-builder-lms)
+# IMAGE_TAG memakai 7 karakter commit hash + 'latest'.
+#
+# CodeBuild project HARUS: privileged mode ON (untuk Docker daemon), dan service
+# role dengan izin ECR (GetAuthorizationToken, Batch*, PutImage, dll).
+# ─────────────────────────────────────────────────────────────────────────────
+
+phases:
+  pre_build:
+    commands:
+      - echo "Login ke Amazon ECR..."
+      - ECR_URI="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
+      - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "$ECR_URI"
+      - IMAGE_TAG="${CODEBUILD_RESOLVED_SOURCE_VERSION:0:7}"
+      - echo "Image tag $IMAGE_TAG"
+  build:
+    commands:
+      - echo "Membangun image Docker..."
+      - docker build -t "$ECR_REPO_NAME:$IMAGE_TAG" .
+      - docker tag "$ECR_REPO_NAME:$IMAGE_TAG" "$ECR_URI/$ECR_REPO_NAME:$IMAGE_TAG"
+      - docker tag "$ECR_REPO_NAME:$IMAGE_TAG" "$ECR_URI/$ECR_REPO_NAME:latest"
+  post_build:
+    commands:
+      - echo "Mendorong image ke ECR..."
+      - docker push "$ECR_URI/$ECR_REPO_NAME:$IMAGE_TAG"
+      - docker push "$ECR_URI/$ECR_REPO_NAME:latest"
+      - echo "Selesai. Image $ECR_URI/$ECR_REPO_NAME:$IMAGE_TAG"
+      # Tulis file definisi image untuk (opsional) deploy ECS via CodePipeline.
+      - printf '[{"name":"ai-builder-lms","imageUri":"%s"}]' "$ECR_URI/$ECR_REPO_NAME:$IMAGE_TAG" > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
