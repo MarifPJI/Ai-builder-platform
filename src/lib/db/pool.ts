@@ -55,9 +55,10 @@ function readCaCert(): string | undefined {
 }
 
 /**
- * Jumlah koneksi maksimum per instance. Di serverless tiap instance hanya
- * memproses sedikit request sekaligus dan Supavisor yang melakukan pooling,
- * jadi default 1 di Vercel agar tidak menghabiskan batas koneksi Supabase.
+ * Jumlah koneksi maksimum per instance. Halaman dashboard menjalankan beberapa
+ * query paralel (`Promise.all`); dengan max 1 semuanya antre berurutan. Supavisor
+ * mode transaksi yang melakukan pooling ke Postgres, jadi koneksi klien ini
+ * murah. Default 5 di Vercel (batas klien pooler free plan: 200).
  * Dapat dioverride dengan `DATABASE_POOL_MAX`.
  */
 function readPoolMax(): number {
@@ -65,7 +66,7 @@ function readPoolMax(): number {
   if (Number.isFinite(fromEnv) && fromEnv > 0) {
     return fromEnv;
   }
-  return process.env.VERCEL ? 1 : 10;
+  return process.env.VERCEL ? 5 : 10;
 }
 
 /** Cache singleton pada globalThis (mencegah kebocoran koneksi saat HMR). */

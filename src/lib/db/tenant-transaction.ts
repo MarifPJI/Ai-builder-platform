@@ -166,14 +166,11 @@ export async function withTenantTransaction<T>(
 
     // 2. Set konteks sesi SEBELUM statement data pertama, via parameterisasi
     //    aman (bukan interpolasi string). Argumen ke-3 `true` = SET LOCAL.
-    await client.query('SELECT set_config($1, $2, true)', [
-      SESSION_VAR_ROLE,
-      context.role,
-    ]);
-    await client.query('SELECT set_config($1, $2, true)', [
-      SESSION_VAR_SCHOOL_ID,
-      context.schoolId,
-    ]);
+    //    Kedua variabel disetel dalam SATU query (hemat satu round-trip).
+    await client.query(
+      'SELECT set_config($1, $2, true), set_config($3, $4, true)',
+      [SESSION_VAR_ROLE, context.role, SESSION_VAR_SCHOOL_ID, context.schoolId],
+    );
 
     // 3. Jalankan logika pemanggil di bawah RLS.
     const result = await fn(client);

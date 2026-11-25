@@ -40,14 +40,10 @@ export async function withPublicTransaction<T>(
   const client = await getPool().connect();
   try {
     await client.query('BEGIN');
-    await client.query('SELECT set_config($1, $2, true)', [
-      SESSION_VAR_ROLE,
-      PUBLIC_ROLE,
-    ]);
-    await client.query('SELECT set_config($1, $2, true)', [
-      SESSION_VAR_SCHOOL_ID,
-      NON_TENANT_SENTINEL,
-    ]);
+    await client.query(
+      'SELECT set_config($1, $2, true), set_config($3, $4, true)',
+      [SESSION_VAR_ROLE, PUBLIC_ROLE, SESSION_VAR_SCHOOL_ID, NON_TENANT_SENTINEL],
+    );
     const result = await fn(client);
     await client.query('COMMIT');
     return result;

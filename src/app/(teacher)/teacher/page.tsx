@@ -35,14 +35,16 @@ function settled<T>(result: PromiseSettledResult<T>, fallback: T): T {
 
 export default async function TeacherDashboardPage() {
   const claims = await requireSession({ requireRole: 'teacher' });
-  const schoolName = (await getSchoolName(claims, claims.schoolId!)) ?? 'Sekolah Anda';
 
-  const [classesRes, sessionsRes, materialsRes] = await Promise.allSettled([
+  // Nama sekolah diambil paralel dengan data lain (sebelumnya berurutan).
+  const [schoolRes, classesRes, sessionsRes, materialsRes] = await Promise.allSettled([
+    getSchoolName(claims, claims.schoolId!),
     listClasses(claims),
     listSessionsWithStatus(claims),
     listPublished(claims),
   ]);
 
+  const schoolName = settled(schoolRes, null) ?? 'Sekolah Anda';
   const classes: ClassSummary[] = settled(classesRes, []);
   const sessions: SessionWithStatus[] = settled(sessionsRes, []);
   const materials: Material[] = settled(materialsRes, []);

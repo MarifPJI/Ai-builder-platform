@@ -110,6 +110,49 @@ export async function getTeacherActivitySummary(
   });
 }
 
+/** Jumlah konten untuk kartu statistik atas Dashboard Admin. */
+export interface AdminContentCounts {
+  schools: number;
+  karya: number;
+  galeri: number;
+  submissions: number;
+  pendingSubmissions: number;
+}
+
+/**
+ * Semua hitungan kartu atas Dashboard Admin dalam SATU query/transaksi.
+ * Sebelumnya dashboard memanggil 5 fungsi list (5 transaksi) hanya untuk
+ * menghitung panjang array. Hasilnya identik di bawah RLS admin.
+ */
+export async function getContentCounts(
+  claims: SessionClaims,
+): Promise<AdminContentCounts> {
+  return withTenantTransaction(claims, async (tx: PoolClient) => {
+    const result = await tx.query<{
+      schools: number;
+      karya: number;
+      galeri: number;
+      submissions: number;
+      pending_submissions: number;
+    }>(
+      `SELECT
+         (SELECT count(*) FROM schools)::int            AS schools,
+         (SELECT count(*) FROM showcase_karya)::int     AS karya,
+         (SELECT count(*) FROM stem_gallery_items)::int AS galeri,
+         (SELECT count(*) FROM showcase_projects)::int  AS submissions,
+         (SELECT count(*) FROM showcase_projects WHERE status = 'pending')::int AS pending_submissions`,
+    );
+    const row = result.rows[0];
+    return {
+      schools: Number(row?.schools ?? 0),
+      karya: Number(row?.karya ?? 0),
+      galeri: Number(row?.galeri ?? 0),
+      submissions: Number(row?.submissions ?? 0),
+      pendingSubmissions: Number(row?.pending_submissions ?? 0),
+    };
+  });
+}
+
 /**
  * Satu baris per SEKOLAH, diurutkan berdasarkan nama. Memakai subquery skalar
  * berkorelasi per metrik (anti-inflasi join ganda) sehingga setiap hitungan

@@ -5,11 +5,8 @@ import { adminNav } from '@/components/shared/adminNav';
 import { Card, CardBody, CardHead } from '@/components/ui/Card';
 import { Table, THead, TBody, TR, TH, TD } from '@/components/ui/Table';
 import { requireSession } from '@/lib/auth/guard';
-import { listSchools } from '@/lib/domain/school-service';
-import { listKaryaForAdmin } from '@/lib/domain/karya-service';
-import { listGalleryForAdmin } from '@/lib/domain/gallery-service';
-import { listForAdmin } from '@/lib/domain/showcase-service';
 import {
+  getContentCounts,
   getTeacherActivitySummary,
   listSchoolActivity,
 } from '@/lib/domain/admin-metrics-service';
@@ -20,14 +17,6 @@ import {
  * domain services (fail-soft agar satu kegagalan tak meruntuhkan dashboard).
  */
 export const dynamic = 'force-dynamic';
-
-async function safeCount<T>(fn: () => Promise<T[]>): Promise<number | null> {
-  try {
-    return (await fn()).length;
-  } catch {
-    return null;
-  }
-}
 
 /** Fail-soft generik sejajar `safeCount`: query gagal → `null` (bukan crash). */
 async function safe<T>(fn: () => Promise<T>): Promise<T | null> {
@@ -41,23 +30,18 @@ async function safe<T>(fn: () => Promise<T>): Promise<T | null> {
 export default async function AdminDashboardPage() {
   const claims = await requireSession({ requireRole: 'admin' });
 
-  const [
-    schools,
-    karya,
-    galeri,
-    submissions,
-    pendingSubmissions,
-    summary,
-    schoolActivity,
-  ] = await Promise.all([
-    safeCount(() => listSchools(claims)),
-    safeCount(() => listKaryaForAdmin(claims)),
-    safeCount(() => listGalleryForAdmin(claims)),
-    safeCount(() => listForAdmin(claims)),
-    safeCount(() => listForAdmin(claims, 'pending')),
+  // 3 transaksi paralel (sebelumnya 7): hitungan konten digabung satu query.
+  const [counts, summary, schoolActivity] = await Promise.all([
+    safe(() => getContentCounts(claims)),
     safe(() => getTeacherActivitySummary(claims)),
     safe(() => listSchoolActivity(claims)),
   ]);
+
+  const schools = counts?.schools ?? null;
+  const karya = counts?.karya ?? null;
+  const galeri = counts?.galeri ?? null;
+  const submissions = counts?.submissions ?? null;
+  const pendingSubmissions = counts?.pendingSubmissions ?? null;
 
   const stats = [
     { label: 'Sekolah Mitra', value: schools, href: '/admin/schools', note: null },

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { logoutAction } from '@/app/actions/logout';
 import { AppIcon, type AppIconName } from './AppIcon';
@@ -79,11 +80,12 @@ export function AppShell({ brand, nav, schoolLabel, avatarInitials, children }: 
           <ul className="app-nav-list">
             {nav.map((item) => (
               <li key={item.href}>
-                <a href={item.href} aria-current={item.active ? 'page' : undefined} className="app-nav-link" onClick={() => { if (!isDesktop) setSidebarOpen(false); }}>
+                {/* next/link: navigasi sisi klien + prefetch (tanpa muat ulang penuh). */}
+                <Link href={item.href} aria-current={item.active ? 'page' : undefined} className="app-nav-link" onClick={() => { if (!isDesktop) setSidebarOpen(false); }}>
                   <AppIcon name={NAV_ICONS[item.href.split('/').filter(Boolean).pop() ?? ''] ?? 'book'} />
                   <span>{item.label}</span>
                   {item.active ? <span className="app-nav-dot" aria-hidden="true" /> : null}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
