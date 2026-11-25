@@ -7,7 +7,7 @@
  */
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
-const CONFIG = { lmsUrl: "https://lms.awsinstem.id/login", email: "marif.hidayatullah@prestasijunior.org" };
+const CONFIG = { lmsUrl: "/login", email: "marif.hidayatullah@prestasijunior.org" };
 const tracks = [
   { label: "Literasi & konsep AI", title: "Kenali AI. Buka kemungkinan.", tag: "FONDASI DULU, IDE KEMUDIAN.", description: "Bangun cara berpikir kritis sebelum mulai berkarya. Pahami teknologi, potensi, dan tanggung jawab di balik AI.", lessons: ["Berpikir komputasional", "Apa itu artificial intelligence?", "Bagaimana cara kerja AI?", "Mengenal generative AI", "Etika & penggunaan AI yang bertanggung jawab"], tools: "Berpikir kritis · Eksplorasi · Diskusi", start: 1 },
   { label: "Bangun dengan AWS Kiro", title: "Dari prompt jadi produk.", tag: "BELAJAR DENGAN MEMBUAT.", description: "Wujudkan ide menjadi aplikasi TaskMaster. Mulai dari tampilan, backend, integrasi AI, hingga aplikasi siap dijalankan.", lessons: ["Vibe coding & pengantar AWS Kiro", "TaskMaster: web frontend", "TaskMaster: API & backend", "Integrasi AI dengan Amazon Bedrock", "Aplikasi full-stack & deployment"], tools: "AWS Kiro · AWS PartyRock · Claude · Amazon Bedrock", start: 6 },

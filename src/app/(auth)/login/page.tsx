@@ -24,7 +24,7 @@ export default function LoginPage() {
         <div className="auth-partners">Prestasi Junior Indonesia <span>×</span> AWS</div>
       </section>
       <section className="auth-panel" aria-label="Masuk platform pembelajaran">
-        <a href="https://awsinstem.id" className="auth-home"><span aria-hidden="true">↖</span> Kembali ke Beranda</a>
+        <a href="/" className="auth-home"><span aria-hidden="true">↖</span> Kembali ke Beranda</a>
         <div className="auth-form-wrap">
           <div className="auth-form-mark" aria-hidden="true"><BrandMark /></div>
           <span className="auth-form-eyebrow">SELAMAT DATANG KEMBALI</span>

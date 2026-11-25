@@ -16,7 +16,7 @@ export default async function AdminKaryaPage() {
       <div className="mb-4">
         <h1 className="text-xl font-semibold text-ink">Showcase Karya</h1>
         <p className="mt-1 text-sm text-muted">
-          Terbitkan karya yang tampil di halaman publik awsinstem.id.
+          Terbitkan karya yang tampil di halaman publik.
         </p>
       </div>
       <KaryaPanels existing={existing} />
