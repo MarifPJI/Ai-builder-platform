@@ -1,11 +1,10 @@
-import Link from 'next/link';
-
 import { listGallery } from '@/lib/domain/gallery-service';
 import { GalleryGrid } from './GalleryGrid';
 
 /** Keep the existing public gallery and year/query-link workflow. */
-export async function GallerySection({ year }: {
+export async function GallerySection({ year, showcaseFilter = 'student' }: {
   year?: number;
+  showcaseFilter?: 'student' | 'teacher';
 }) {
   let items: Awaited<ReturnType<typeof listGallery>> = [];
   let unavailable = false;
@@ -21,10 +20,9 @@ export async function GallerySection({ year }: {
   return <>
     <nav className="filters gallery-filters" aria-label="Filter tahun galeri">
       {tabs.map((item) => {
-        const query = new URLSearchParams();
+        const query = new URLSearchParams({ showcase: showcaseFilter });
         if (item.year !== undefined) query.set('year', String(item.year));
-        const href = query.toString() ? `/?${query.toString()}#galeri` : '/#galeri';
-        return <Link key={item.label} href={href} scroll={false} aria-current={year === item.year ? 'page' : undefined}>{item.label}</Link>;
+        return <a key={item.label} href={`/?${query.toString()}#galeri`} aria-current={year === item.year ? 'page' : undefined}>{item.label}</a>;
       })}
     </nav>
     {unavailable || visible.length === 0 ? (

@@ -27,7 +27,7 @@ export function SubmitAndLoginSection() {
           Khusus Guru Pengampu &amp; Admin Program yang telah diaktifkan Admin.
         </p>
         <a
-          href="/login"
+          href="https://lms.awsinstem.id/login"
           className="mt-6 inline-flex w-fit items-center justify-center rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-indigo hover:bg-white/90"
         >
           Masuk Akun
