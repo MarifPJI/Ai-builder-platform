@@ -304,7 +304,7 @@ function Showcase({ published }: { published: ReactNode }) {
           </li>
         </FeaturedProjectCarousel>
         <div id="karya-terbit" className="home-published">
-          <h3><Bi id="Karya yang Dipublikasikan" en="Published Projects" /></h3>
+          <h3><Bi id="Karya Siswa yang Dipublikasikan" en="Published Student Projects" /></h3>
           {published}
         </div>
       </div>

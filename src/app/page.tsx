@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description: 'Program literasi AI dan keterampilan digital untuk guru dan siswa SMA/SMK. Pelajari kurikulum, AI Hackathon, dan karya siswa bersama PJI dan AWS Indonesia.',
 };
 
-type SearchParams = { showcase?: string | string[]; year?: string | string[] };
+type SearchParams = { year?: string | string[] };
 
 function parseYear(value?: string | string[]): number | undefined {
   const year = typeof value === 'string' ? Number(value) : NaN;
@@ -26,12 +26,11 @@ export default async function PublicLandingPage({ searchParams }: {
 }) {
   // Await also accepts the plain-object searchParams supplied by older Next.js releases.
   const params = await searchParams;
-  const filter = params?.showcase === 'teacher' ? 'teacher' : 'student';
   const year = parseYear(params?.year);
   return (
     <AIBuilderHome
-      showcase={<ShowcaseSection filter={filter} year={year} />}
-      gallery={<GallerySection year={year} showcaseFilter={filter} />}
+      showcase={<ShowcaseSection />}
+      gallery={<GallerySection year={year} />}
       submission={<SubmitProjectForm />}
     />
   );
