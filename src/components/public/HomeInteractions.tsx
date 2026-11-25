@@ -390,6 +390,62 @@ export function FeaturedProjectCarousel({ heading, children }: { heading: ReactN
   );
 }
 
+/**
+ * Face overlay drawn on the robot image's own 360×360 grid.
+ * - Always hides the "Zzz" baked into the image and draws animated ones (sleep only).
+ * - When awake, covers the closed eyes and mouth with the visor colour and draws open eyes and a smile.
+ * Coordinates were measured from footer-robot.webp; the visor is tilted about 9.5°.
+ */
+function RobotFace() {
+  return (
+    <svg className="home-robot-face" viewBox="0 0 360 360" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="robot-visor" gradientUnits="userSpaceOnUse" x1="140" y1="0" x2="232" y2="0">
+          <stop offset="0" stopColor="#00052a" />
+          <stop offset="1" stopColor="#031c62" />
+        </linearGradient>
+        <filter id="robot-soft" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="1.6" />
+        </filter>
+        <filter id="robot-glow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="2.2" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+
+      {/* Hide the static Zzz printed in the artwork. */}
+      <g fill="#17153a" filter="url(#robot-soft)">
+        <rect x="316" y="16" width="27" height="30" rx="4" />
+        <rect x="298" y="55" width="21" height="21" rx="4" />
+        <rect x="279" y="83" width="15" height="15" rx="4" />
+      </g>
+
+      {/* Sleeping: floating Zzz. */}
+      <g className="home-robot-zzz" fill="#cfc9f2" fontFamily="var(--home-display), Arial, sans-serif" fontWeight="800">
+        <text x="284" y="96" fontSize="14">z</text>
+        <text x="302" y="74" fontSize="19">z</text>
+        <text x="320" y="44" fontSize="26">Z</text>
+      </g>
+
+      {/* Awake: open eyes and a smile. */}
+      <g className="home-robot-awake">
+        <g fill="url(#robot-visor)" filter="url(#robot-soft)">
+          <ellipse cx="153" cy="109" rx="14" ry="8" transform="rotate(10 153 109)" />
+          <ellipse cx="213" cy="119" rx="14" ry="8" transform="rotate(10 213 119)" />
+          <ellipse cx="181" cy="128" rx="8" ry="6" />
+        </g>
+        <g filter="url(#robot-glow)">
+          <g className="home-robot-eyes" fill="#6ff0ff">
+            <rect x="148.5" y="101.5" width="9" height="15" rx="4.5" transform="rotate(9.5 153 109)" />
+            <rect x="208.5" y="111.5" width="9" height="15" rx="4.5" transform="rotate(9.5 213 119)" />
+          </g>
+          <path d="M170 125 Q181 136 192 125" fill="none" stroke="#6ff0ff" strokeWidth="3.6" strokeLinecap="round" transform="rotate(9.5 181 128)" />
+        </g>
+      </g>
+    </svg>
+  );
+}
+
 export function FooterRobot() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [awake, setAwake] = useState(false);
@@ -408,7 +464,7 @@ export function FooterRobot() {
     }, 3000);
   }
 
-  const greeting = text({ id: 'Halo! Ayo jelajahi programnya.', en: 'Hi! Let’s explore the program.' });
+  const greeting = text({ id: 'Lagi ngoding, kok!', en: 'Just coding, I promise!' });
 
   return (
     <div className="home-footer-mascot">
@@ -419,7 +475,10 @@ export function FooterRobot() {
         data-awake={awake}
         aria-label={text({ id: 'Bangunkan robot AI Builder', en: 'Wake up the AI Builder robot' })}
       >
-        <Image unoptimized src={footerRobot} alt="" />
+        <div className="home-robot-figure">
+          <Image unoptimized src={footerRobot} alt="" />
+          <RobotFace />
+        </div>
         <span aria-hidden="true">{awake ? greeting : text({ id: 'Zzz… klik untuk bangunkan', en: 'Zzz… click to wake me up' })}</span>
       </button>
       <span role="status" className="home-visually-hidden">{awake ? greeting : ''}</span>
