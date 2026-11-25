@@ -390,13 +390,34 @@ export function FeaturedProjectCarousel({ heading, children }: { heading: ReactN
   );
 }
 
+/** Fingers resting on the keyboard in footer-robot.webp: centre, radii and tilt (image px). */
+const ROBOT_FINGERS = [
+  { cx: 152, cy: 238.5, rx: 6.8, ry: 12, tilt: -10 },
+  { cx: 162.5, cy: 238.5, rx: 6.8, ry: 12.5, tilt: -10 },
+  { cx: 173.5, cy: 238, rx: 7.5, ry: 11, tilt: -15 },
+];
+
+/** Keys lighting up just below each fingertip. */
+const ROBOT_KEYS = [
+  { cx: 155, cy: 253.5 },
+  { cx: 166, cy: 254 },
+  { cx: 178, cy: 252 },
+];
+
+const ROBOT_CODE = [
+  { x: 262, y: 186, size: 12, glyph: '</>' },
+  { x: 288, y: 184, size: 11, glyph: '{ }' },
+  { x: 310, y: 181, size: 10, glyph: '01' },
+  { x: 274, y: 185, size: 9, glyph: ';' },
+];
+
 /**
- * Face overlay drawn on the robot image's own 360×360 grid.
- * - Always hides the "Zzz" baked into the image and draws animated ones (sleep only).
- * - When awake, covers the closed eyes and mouth with the visor colour and draws open eyes and a smile.
- * Coordinates were measured from footer-robot.webp; the visor is tilted about 9.5°.
+ * Overlay drawn on the robot image's own 360×360 grid (coordinates measured from footer-robot.webp).
+ * Sleeping: floating Zzz, laptop dimmed.
+ * Awake: eyes open, smile, fingers tap the keys, keys light up, the laptop glows and code floats up.
+ * The image has a single pose, so each finger is a feathered copy of the image that moves on its own.
  */
-function RobotFace() {
+function RobotFace({ src }: { src: string }) {
   return (
     <svg className="home-robot-face" viewBox="0 0 360 360" aria-hidden="true" focusable="false">
       <defs>
@@ -404,6 +425,14 @@ function RobotFace() {
           <stop offset="0" stopColor="#00052a" />
           <stop offset="1" stopColor="#031c62" />
         </linearGradient>
+        <radialGradient id="robot-feather">
+          <stop offset="0.7" stopColor="#fff" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="robot-light">
+          <stop offset="0" stopColor="#6ff0ff" stopOpacity="0.9" />
+          <stop offset="1" stopColor="#6ff0ff" stopOpacity="0" />
+        </radialGradient>
         <filter id="robot-soft" x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation="1.6" />
         </filter>
@@ -411,6 +440,11 @@ function RobotFace() {
           <feGaussianBlur stdDeviation="2.2" result="blur" />
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
         </filter>
+        {ROBOT_FINGERS.map(({ cx, cy, rx, ry, tilt }, index) => (
+          <mask key={index} id={'robot-finger-' + index} maskUnits="userSpaceOnUse" x="0" y="0" width="360" height="360">
+            <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="url(#robot-feather)" transform={`rotate(${tilt} ${cx} ${cy})`} />
+          </mask>
+        ))}
       </defs>
 
       {/* Hide the static Zzz printed in the artwork. */}
@@ -420,6 +454,35 @@ function RobotFace() {
         <rect x="279" y="83" width="15" height="15" rx="4" />
       </g>
 
+      {/* Laptop lid: dimmed while asleep, glowing logo while coding. */}
+      <polygon className="home-robot-lid-dim" points="203,196 324,186 300,258 182,266" fill="#0b0a24" />
+      <ellipse className="home-robot-logo-glow" cx="256.5" cy="229.5" rx="26" ry="17" fill="url(#robot-light)" />
+
+      {/* Screen light falling on the chest and visor while coding. */}
+      <ellipse className="home-robot-screen-light" cx="196" cy="170" rx="62" ry="48" fill="url(#robot-light)" />
+
+      {/* Typing fingers and the keys they press. */}
+      <g className="home-robot-typing">
+        {ROBOT_FINGERS.map((_, index) => (
+          <g key={index} className="home-robot-finger" style={{ animationDelay: `${0.7 + index * 0.21}s` }}>
+            <image href={src} width="360" height="360" mask={`url(#robot-finger-${index})`} />
+          </g>
+        ))}
+        {ROBOT_KEYS.map(({ cx, cy }, index) => (
+          <ellipse
+            key={index}
+            className="home-robot-key"
+            cx={cx}
+            cy={cy}
+            rx="3.2"
+            ry="1.4"
+            fill="#7ff4ff"
+            transform={`rotate(18 ${cx} ${cy})`}
+            style={{ animationDelay: `${0.7 + index * 0.21}s` }}
+          />
+        ))}
+      </g>
+
       {/* Sleeping: floating Zzz. */}
       <g className="home-robot-zzz" fill="#cfc9f2" fontFamily="var(--home-display), Arial, sans-serif" fontWeight="800">
         <text x="284" y="96" fontSize="14">z</text>
@@ -427,20 +490,36 @@ function RobotFace() {
         <text x="320" y="44" fontSize="26">Z</text>
       </g>
 
-      {/* Awake: open eyes and a smile. */}
-      <g className="home-robot-awake">
-        <g fill="url(#robot-visor)" filter="url(#robot-soft)">
-          <ellipse cx="153" cy="109" rx="14" ry="8" transform="rotate(10 153 109)" />
-          <ellipse cx="213" cy="119" rx="14" ry="8" transform="rotate(10 213 119)" />
-          <ellipse cx="181" cy="128" rx="8" ry="6" />
+      {/* Coding: snippets floating up from the laptop. */}
+      <g className="home-robot-code" fill="#6ff0ff" fontFamily="var(--home-mono), monospace" fontWeight="700">
+        {ROBOT_CODE.map(({ x, y, size, glyph }, index) => (
+          <text key={glyph} x={x} y={y} fontSize={size} style={{ animationDelay: `${index * 0.55}s` }}>{glyph}</text>
+        ))}
+      </g>
+
+      {/* Face: the visor patch hides the closed eyes, then the eyes open and the smile draws in. */}
+      <g className="home-robot-cover" fill="url(#robot-visor)" filter="url(#robot-soft)">
+        <ellipse cx="153" cy="109" rx="14" ry="8" transform="rotate(10 153 109)" />
+        <ellipse cx="213" cy="119" rx="14" ry="8" transform="rotate(10 213 119)" />
+        <ellipse cx="181" cy="128" rx="8" ry="6" />
+      </g>
+      <g className="home-robot-features" fill="#6ff0ff" filter="url(#robot-glow)">
+        <g transform="rotate(9.5 153 109)">
+          <g className="home-robot-eye"><rect className="home-robot-blink" x="148.5" y="101.5" width="9" height="15" rx="4.5" /></g>
         </g>
-        <g filter="url(#robot-glow)">
-          <g className="home-robot-eyes" fill="#6ff0ff">
-            <rect x="148.5" y="101.5" width="9" height="15" rx="4.5" transform="rotate(9.5 153 109)" />
-            <rect x="208.5" y="111.5" width="9" height="15" rx="4.5" transform="rotate(9.5 213 119)" />
-          </g>
-          <path d="M170 125 Q181 136 192 125" fill="none" stroke="#6ff0ff" strokeWidth="3.6" strokeLinecap="round" transform="rotate(9.5 181 128)" />
+        <g transform="rotate(9.5 213 119)">
+          <g className="home-robot-eye"><rect className="home-robot-blink" x="208.5" y="111.5" width="9" height="15" rx="4.5" /></g>
         </g>
+        <path
+          className="home-robot-smile"
+          d="M170 125 Q181 136 192 125"
+          pathLength={1}
+          fill="none"
+          stroke="#6ff0ff"
+          strokeWidth="3.6"
+          strokeLinecap="round"
+          transform="rotate(9.5 181 128)"
+        />
       </g>
     </svg>
   );
@@ -461,7 +540,7 @@ export function FooterRobot() {
     timer.current = setTimeout(() => {
       setAwake(false);
       timer.current = null;
-    }, 3000);
+    }, 7000);
   }
 
   const greeting = text({ id: 'Lagi ngoding, kok!', en: 'Just coding, I promise!' });
@@ -476,10 +555,14 @@ export function FooterRobot() {
         aria-label={text({ id: 'Bangunkan robot AI Builder', en: 'Wake up the AI Builder robot' })}
       >
         <div className="home-robot-figure">
-          <Image unoptimized src={footerRobot} alt="" />
-          <RobotFace />
+          <div className="home-robot-body">
+            <Image unoptimized src={footerRobot} alt="" />
+            <RobotFace src={footerRobot.src} />
+          </div>
         </div>
-        <span aria-hidden="true">{awake ? greeting : text({ id: 'Zzz… klik untuk bangunkan', en: 'Zzz… click to wake me up' })}</span>
+        <span aria-hidden="true" key={awake ? 'awake' : 'asleep'} className="home-robot-label">
+          {awake ? greeting : text({ id: 'Zzz… klik untuk bangunkan', en: 'Zzz… click to wake me up' })}
+        </span>
       </button>
       <span role="status" className="home-visually-hidden">{awake ? greeting : ''}</span>
     </div>
