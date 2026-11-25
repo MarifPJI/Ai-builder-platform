@@ -9,9 +9,11 @@ Dokumen ini adalah urutan kerja untuk menyalakannya. Rencana awal ada di `SUPABA
 2. Dashboard > Project Settings > API Keys: catat `SUPABASE_URL`, kunci publishable/anon (`SUPABASE_ANON_KEY`), dan kunci secret/service_role (`SUPABASE_SERVICE_ROLE_KEY`).
 3. Dashboard > Integrations > Data API: **nonaktifkan Data API** bila tersedia. Aplikasi hanya memakai koneksi `pg`; migrasi 0021 juga mencabut grant `anon`/`authenticated` sebagai lapis kedua.
 
-## 2. Jalankan migrasi (koneksi langsung, port 5432)
+## 2. Siapkan database
 
-Gunakan string "Direct connection" (atau Session pooler bila jaringan Anda hanya IPv4) sebagai owner `postgres`.
+**Cara termudah:** buka Dashboard > SQL Editor, paste seluruh isi `db/supabase_setup.sql`, ganti `GANTI_PASSWORD_INI` dengan password kuat untuk `app_runtime`, lalu Run. Skrip ini membuat semua tabel, RLS, role, grant, dan 51 sekolah dalam satu transaksi, dan aman dijalankan ulang. Lewati sisa langkah 2 bila memakai cara ini.
+
+**Alternatif (psql, per migrasi):** gunakan string "Direct connection" (atau Session pooler bila jaringan Anda hanya IPv4) sebagai owner `postgres`.
 
 ```powershell
 $env:DIRECT_URL = "postgresql://postgres:<PASSWORD>@db.<PROJECT_REF>.supabase.co:5432/postgres"
