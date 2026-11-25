@@ -19,7 +19,6 @@ import {
 
 type HomeSlots = {
   showcase: ReactNode;
-  gallery: ReactNode;
   submission: ReactNode;
 };
 
@@ -405,7 +404,6 @@ function Footer() {
             <a href="#kurikulum"><Bi id="Kurikulum" en="Curriculum" /></a>
             <a href="#hackathon">AI Hackathon</a>
             <a href="#showcase"><Bi id="Showcase karya" en="Project showcase" /></a>
-            <a href="#galeri"><Bi id="Galeri kegiatan" en="Activity gallery" /></a>
           </nav>
           <nav aria-label="Links / Tautan">
             <h2><Bi id="Terhubung" en="Connect" /></h2>
@@ -429,7 +427,7 @@ function Footer() {
   );
 }
 
-export default function AIBuilderHome({ showcase, gallery, submission }: HomeSlots) {
+export default function AIBuilderHome({ showcase, submission }: HomeSlots) {
   return (
     <div id="top" className="stem-home" suppressHydrationWarning>
       <LangInit />
@@ -443,12 +441,6 @@ export default function AIBuilderHome({ showcase, gallery, submission }: HomeSlo
         <Curriculum />
         <Hackathon />
         <Showcase published={showcase} />
-        <section id="galeri" className="home-gallery" aria-labelledby="home-gallery-title">
-          <div className="home-container home-section">
-            <h2 id="home-gallery-title"><Bi id={<>GALERI <span>KEGIATAN.</span></>} en={<>ACTIVITY <span>GALLERY.</span></>} /></h2>
-            {gallery}
-          </div>
-        </section>
         <Submission>{submission}</Submission>
         <Faq />
         <div className="home-closing">
