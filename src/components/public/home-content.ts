@@ -12,7 +12,7 @@ import siapIn from './home-assets/project-siap-in.webp';
 import surgeon from './home-assets/project-surgeon.webp';
 import { t, type Txt } from './Bi';
 
-export const LMS_URL = 'https://ai-builder-platform-iota.vercel.app/login';
+export const LMS_URL = 'https://lms.awsinstem.id/';
 export const PROGRAM_EMAIL = 'marif.hidayatullah@prestasijunior.org';
 
 export const heroPhotos: { image: typeof hackathonPhoto; alt: Txt; position: string }[] = [
