@@ -1,0 +1,278 @@
+/*
+ * Homepage: bilingual switch (ID/EN), hover effects and section animations.
+ * Loaded after homepage.css. Movement uses the individual `translate`/`scale`
+ * properties so the existing `transform: rotate()` on cards and stickers is kept.
+ */
+
+/* ---------- Language visibility ---------- */
+.stem-home i18n-text { display: inline; }
+.stem-home:not([data-lang='en']) [data-l='en'],
+.stem-home[data-lang='en'] [data-l='id'] {
+  display: none;
+}
+
+/* ---------- ID / EN toggle ---------- */
+.stem-home .home-lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1.5px solid var(--home-navy);
+  border-radius: 999px;
+  background: var(--home-paper);
+  box-shadow: 2px 2px 0 var(--home-navy);
+}
+
+.stem-home .home-lang button {
+  min-width: 36px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--home-navy);
+  font: 700 11px/1 var(--home-mono);
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition: background-color .25s ease, color .25s ease, scale .2s ease;
+}
+
+.stem-home .home-lang button[aria-pressed='true'] {
+  background: var(--home-navy);
+  color: var(--home-cream);
+}
+
+.stem-home .home-lang button:focus-visible {
+  outline: 2px solid var(--home-magenta);
+  outline-offset: 2px;
+}
+
+.stem-home .home-nav-actions { display: none; }
+.stem-home .home-nav-lang-desktop { display: flex; }
+
+@media (max-width: 600px) {
+  .stem-home .home-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+  }
+
+  .stem-home .home-nav-lang-desktop { display: none; }
+}
+
+/* ---------- Sticky nav shadow on scroll ---------- */
+.stem-home .home-nav {
+  transition: box-shadow .3s ease, background-color .3s ease;
+}
+
+.stem-home .home-nav[data-scrolled='true'] {
+  background: color-mix(in srgb, var(--home-cream) 88%, transparent);
+  box-shadow: 0 6px 22px rgba(36, 32, 82, .10);
+  backdrop-filter: saturate(1.4) blur(10px);
+}
+
+/* ---------- Scroll reveal (set by HomeMotion) ---------- */
+.stem-home [data-reveal='pending'] {
+  opacity: 0;
+  translate: 0 28px;
+}
+
+.stem-home [data-reveal='in'] {
+  opacity: 1;
+  translate: 0 0;
+  transition:
+    opacity .7s ease var(--reveal-delay, 0ms),
+    translate .8s cubic-bezier(.2, .7, .2, 1) var(--reveal-delay, 0ms);
+}
+
+/* ---------- Hero entrance ---------- */
+@keyframes home-rise {
+  from { opacity: 0; translate: 0 24px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+@keyframes home-pop {
+  from { opacity: 0; scale: .9; }
+  to { opacity: 1; scale: 1; }
+}
+
+@keyframes home-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes home-spin {
+  to { rotate: 360deg; }
+}
+
+.stem-home .home-hero-copy > * {
+  animation: home-rise .8s cubic-bezier(.2, .7, .2, 1) both;
+}
+.stem-home .home-hero-copy > :nth-child(2) { animation-delay: .12s; }
+.stem-home .home-hero-copy > :nth-child(3) { animation-delay: .22s; }
+.stem-home .home-hero-copy > :nth-child(4) { animation-delay: .32s; }
+
+.stem-home .home-hero-circle {
+  animation: home-pop .9s cubic-bezier(.2, .7, .2, 1) .15s both;
+}
+
+.stem-home .home-hero h1 svg path {
+  stroke-dasharray: 1;
+  animation: home-draw 1s ease-out .7s both;
+}
+.stem-home .home-hero h1 svg path + path { animation-delay: .95s; }
+
+.stem-home .home-stamp > div {
+  animation: home-spin 18s linear infinite;
+}
+
+/* ---------- Hover effects (pointer devices only) ---------- */
+.stem-home .home-primary-button,
+.stem-home .home-nav-lms,
+.stem-home .home-lms-card,
+.stem-home .home-phase-card,
+.stem-home .home-activity-grid > li,
+.stem-home .home-activity-grid img,
+.stem-home .home-featured-card,
+.stem-home .home-featured-next,
+.stem-home .home-competition-stages > li,
+.stem-home .home-awards > div,
+.stem-home .home-tab-list button,
+.stem-home .home-lesson-list li,
+.stem-home .home-faq-list details,
+.stem-home .project-card,
+.stem-home .home-pji-logo,
+.stem-home .home-aws-logo,
+.stem-home .home-footer nav a {
+  transition:
+    translate .35s cubic-bezier(.2, .7, .2, 1),
+    scale .35s cubic-bezier(.2, .7, .2, 1),
+    box-shadow .35s ease,
+    background-color .3s ease,
+    color .3s ease,
+    border-color .3s ease;
+}
+
+.stem-home .home-primary-button > span,
+.stem-home .home-text-link svg,
+.stem-home .home-tab-list button svg {
+  transition: translate .3s cubic-bezier(.2, .7, .2, 1);
+}
+
+.stem-home .home-featured-image {
+  overflow: hidden;
+  border-bottom: 2px solid var(--home-navy);
+}
+
+.stem-home .home-featured-image img {
+  border-bottom: 0;
+  transition: scale .6s cubic-bezier(.2, .7, .2, 1), filter .4s ease;
+}
+
+.stem-home .home-nav-links > a:not(.home-nav-lms) {
+  position: relative;
+}
+
+.stem-home .home-nav-links > a:not(.home-nav-lms)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 8px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--home-magenta);
+  scale: 0 1;
+  transform-origin: right;
+  transition: scale .3s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .stem-home .home-nav-links > a:not(.home-nav-lms):hover::after {
+    scale: 1 1;
+    transform-origin: left;
+  }
+
+  .stem-home .home-lang button:not([aria-pressed='true']):hover {
+    background: var(--home-lavender);
+    scale: 1.05;
+  }
+
+  .stem-home .home-nav-lms:hover { translate: 0 -2px; }
+
+  .stem-home .home-primary-button:hover {
+    translate: -2px -3px;
+    box-shadow: 6px 7px 0 var(--home-navy);
+  }
+  .stem-home .home-primary-button:hover > span { translate: 4px 0; }
+  .stem-home .home-primary-button:active { translate: 1px 1px; box-shadow: 1px 2px 0 var(--home-navy); }
+
+  .stem-home .home-text-link:hover svg { translate: 3px -3px; }
+
+  .stem-home .home-hero-circle img { transition: scale 1.2s cubic-bezier(.2, .7, .2, 1); }
+  .stem-home .home-hero-stage:hover .home-slide[data-active='true'] img { scale: 1.06; }
+
+  .stem-home .home-pji-logo:hover,
+  .stem-home .home-aws-logo:hover { scale: 1.08; }
+
+  .stem-home .home-phase-card:hover {
+    translate: 0 -10px;
+    box-shadow: 10px 12px 0 var(--home-navy);
+  }
+
+  .stem-home .home-activity-grid > li:hover { translate: 0 -8px; }
+  .stem-home .home-activity-grid > li:hover img {
+    box-shadow: 9px 10px 0 var(--home-magenta);
+    scale: 1.02;
+  }
+  .stem-home .home-activity-grid > li:hover h3 { color: var(--home-magenta); }
+
+  .stem-home .home-tab-list button:hover { translate: 4px 0; }
+  .stem-home .home-tab-list button:hover svg { translate: 4px 0; }
+
+  .stem-home .home-lesson-list li:hover {
+    translate: 6px 0;
+    background-color: rgba(199, 187, 237, .12);
+  }
+
+  .stem-home .home-competition-stages > li:hover { translate: 6px 0; }
+  .stem-home .home-awards > div:hover { translate: 0 -5px; }
+
+  .stem-home .home-featured-card:hover,
+  .stem-home .home-featured-next:hover {
+    translate: 0 -8px;
+    box-shadow: 9px 11px 0 var(--home-navy);
+  }
+  .stem-home .home-featured-card:hover .home-featured-image img {
+    scale: 1.07;
+    filter: saturate(1.15);
+  }
+
+  .stem-home .project-card:hover {
+    translate: 0 -6px;
+    box-shadow: 8px 10px 0 var(--home-navy);
+  }
+
+  .stem-home .home-lms-card:hover { translate: 0 -4px; }
+
+  .stem-home .home-faq-list details:hover { translate: 0 -3px; }
+
+  .stem-home .home-footer nav a:hover { translate: 4px 0; }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .stem-home *,
+  .stem-home *::before,
+  .stem-home *::after {
+    animation: none !important;
+    transition: none !important;
+    translate: none !important;
+    scale: none !important;
+  }
+
+  .stem-home [data-reveal] {
+    opacity: 1 !important;
+  }
+}

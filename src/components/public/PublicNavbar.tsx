@@ -1,15 +1,17 @@
 /**
  * Navbar publik U01 — segmented pill TANPA angka/badge (public-showcase R1.4).
  * Item: Showcase Karya, Galeri Kegiatan, Kirim Proyek, Masuk Akun.
- * "Masuk Akun" menuju /login (di lms.awsinstem.id via alur login).
+ * "Masuk Akun" menuju halaman login LMS (LMS_URL).
  */
+import { LMS_URL } from './home-content';
+
+
 export function PublicNavbar() {
   const items = [
     { label: 'Showcase Karya', href: '#showcase' },
     { label: 'Galeri Kegiatan', href: '#galeri' },
     { label: 'Kirim Proyek', href: '#kirim' },
-    // Masuk Akun menuju subdomain LMS agar login terjadi di lms.awsinstem.id.
-    { label: 'Masuk Akun', href: 'https://lms.awsinstem.id/login' },
+    { label: 'Masuk Akun', href: LMS_URL },
   ];
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white/90 backdrop-blur">

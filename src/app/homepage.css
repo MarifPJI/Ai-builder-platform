@@ -98,7 +98,7 @@
 }
 
 .stem-home .home-container {
-  width: min(992px, 100% - var(--home-gutter) * 2);
+  width: min(1200px, 100% - var(--home-gutter) * 2);
   margin-inline: auto;
 }
 
@@ -180,7 +180,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  width: min(1100px, 100% - var(--home-gutter) * 2);
+  width: min(1280px, 100% - var(--home-gutter) * 2);
   height: 100%;
   margin-inline: auto;
 }

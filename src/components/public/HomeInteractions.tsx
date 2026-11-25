@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Image from 'next/image';
 import {
@@ -12,16 +12,27 @@ import {
 
 import brandImage from './home-assets/ai-builder.png';
 import footerRobot from './home-assets/footer-robot.webp';
+import { Bi, T } from './Bi';
 import { curriculum, heroPhotos, LMS_URL, programPhases } from './home-content';
 import { HomeIcon, HomeSpark } from './HomeIcons';
+import { LanguageToggle, useText } from './HomeLanguage';
 
 const numberFormat = new Intl.NumberFormat('id-ID');
 const twoDigits = (index: number) => String(index + 1).padStart(2, '0');
 
 export function HomeNavigation() {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const linksId = useId();
+  const text = useText();
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   function dismissMenu(event: KeyboardEvent<HTMLElement>) {
     if (event.key === 'Escape' && open) {
@@ -31,29 +42,33 @@ export function HomeNavigation() {
   }
 
   return (
-    <nav className="home-nav" aria-label="Navigasi utama" onKeyDown={dismissMenu}>
+    <nav className="home-nav" data-scrolled={scrolled} aria-label={text({ id: 'Navigasi utama', en: 'Main navigation' })} onKeyDown={dismissMenu}>
       <div className="home-nav-inner">
         <a href="#top" className="home-brand" onClick={() => setOpen(false)}>
-          <Image unoptimized src={brandImage} alt="AI Builder by PJI Ã— AWS Â· Beranda" loading="eager" />
+          <Image unoptimized src={brandImage} alt={text({ id: 'AI Builder by PJI × AWS · Beranda', en: 'AI Builder by PJI × AWS · Home' })} loading="eager" />
         </a>
-        <button
-          className="home-menu-toggle"
-          type="button"
-          ref={menuButton}
-          aria-controls={linksId}
-          aria-expanded={open}
-          aria-label={open ? 'Tutup menu' : 'Buka menu'}
-          onClick={() => setOpen(!open)}
-        >
-          <HomeIcon name={open ? 'close' : 'menu'} size={22} />
-        </button>
+        <div className="home-nav-actions">
+          <div className="home-nav-lang-mobile"><LanguageToggle /></div>
+          <button
+            className="home-menu-toggle"
+            type="button"
+            ref={menuButton}
+            aria-controls={linksId}
+            aria-expanded={open}
+            aria-label={open ? text({ id: 'Tutup menu', en: 'Close menu' }) : text({ id: 'Buka menu', en: 'Open menu' })}
+            onClick={() => setOpen(!open)}
+          >
+            <HomeIcon name={open ? 'close' : 'menu'} size={22} />
+          </button>
+        </div>
         <div id={linksId} className="home-nav-links" data-open={open}>
           <a href="#program" onClick={() => setOpen(false)}>Program</a>
-          <a href="#kurikulum" onClick={() => setOpen(false)}>Kurikulum</a>
-          <a href="#showcase" onClick={() => setOpen(false)}>Karya Siswa</a>
+          <a href="#kurikulum" onClick={() => setOpen(false)}><Bi id="Kurikulum" en="Curriculum" /></a>
+          <a href="#showcase" onClick={() => setOpen(false)}><Bi id="Karya Siswa" en="Student Projects" /></a>
           <a className="home-nav-lms" href={LMS_URL} onClick={() => setOpen(false)}>
-            Masuk LMS <HomeIcon name="external" size={14} />
+            <Bi id="Masuk LMS" en="LMS Login" /> <HomeIcon name="external" size={14} />
           </a>
+          <div className="home-nav-lang-desktop"><LanguageToggle /></div>
         </div>
       </div>
     </nav>
@@ -65,6 +80,7 @@ export function HeroSlideshow() {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const text = useText();
 
   useEffect(() => {
     const element = stage.current;
@@ -105,14 +121,14 @@ export function HeroSlideshow() {
       ref={stage}
       className="home-hero-stage"
       role="region"
-      aria-label="Foto kegiatan STEM Capacity Building"
+      aria-label={text({ id: 'Foto kegiatan STEM Capacity Building', en: 'Photos of STEM Capacity Building activities' })}
       onPointerEnter={(event) => { if (event.pointerType === 'mouse') setHovered(true); }}
       onPointerLeave={() => setHovered(false)}
     >
       <div className="home-hero-circle">
         {heroPhotos.map(({ image, alt, position }, index) => (
           <div
-            key={alt}
+            key={alt.id}
             className="home-slide"
             data-active={active === index}
             aria-hidden={active !== index}
@@ -120,20 +136,20 @@ export function HeroSlideshow() {
             <Image
               unoptimized
               src={image}
-              alt={alt}
+              alt={text(alt)}
               style={{ objectPosition: position }}
               loading={index < 2 ? 'eager' : 'lazy'}
               fetchPriority={index === 0 ? 'high' : undefined}
             />
           </div>
         ))}
-        <div className="home-slide-controls" aria-label="Pilih foto" role="group">
+        <div className="home-slide-controls" aria-label={text({ id: 'Pilih foto', en: 'Choose photo' })} role="group">
           {heroPhotos.map(({ alt }, index) => (
             <button
               type="button"
-              key={alt}
+              key={alt.id}
               className="home-slide-dot"
-              aria-label={'Foto ' + (index + 1) + ': ' + alt}
+              aria-label={text({ id: 'Foto ', en: 'Photo ' }) + (index + 1) + ': ' + text(alt)}
               aria-pressed={index === active}
               onFocus={(event) => { if (event.currentTarget.matches(':focus-visible')) setPaused(true); }}
               onClick={() => {
@@ -145,7 +161,9 @@ export function HeroSlideshow() {
           <button
             type="button"
             className="home-slide-toggle"
-            aria-label={paused ? 'Putar pergantian foto' : 'Jeda pergantian foto'}
+            aria-label={paused
+              ? text({ id: 'Putar pergantian foto', en: 'Play photo slideshow' })
+              : text({ id: 'Jeda pergantian foto', en: 'Pause photo slideshow' })}
             onClick={() => setPaused((value) => !value)}
           >
             <HomeIcon name={paused ? 'play' : 'pause'} size={15} />
@@ -162,7 +180,7 @@ export function HeroSlideshow() {
         <span>THINK. BUILD. IMPACT.</span>
       </div>
       <div className="home-sticker home-sticker-idea" aria-hidden="true">
-        <span>{'< ide_siswa /> â†’ dampak_nyata'}</span>
+        <span>{text({ id: '< ide_siswa /> → dampak_nyata', en: '< student_idea /> → real_impact' })}</span>
       </div>
     </div>
   );
@@ -206,21 +224,21 @@ export function ProgramImpact() {
         <article className="home-phase-card" key={phase.period}>
           <div className="home-phase-badges">
             <span>{phase.period}</span>
-            {phase.current && <span>SAAT INI</span>}
+            {phase.current && <span><Bi id="SAAT INI" en="NOW" /></span>}
           </div>
-          <div className="home-phase-label">TAHAP {twoDigits(index)} <HomeSpark size={14} /></div>
-          <h3>{phase.title}</h3>
-          <p>{phase.description}</p>
+          <div className="home-phase-label"><Bi id="TAHAP" en="PHASE" /> {twoDigits(index)} <HomeSpark size={14} /></div>
+          <h3><T v={phase.title} /></h3>
+          <p><T v={phase.description} /></p>
           <div className="home-phase-impact">
             <strong aria-hidden="true">{numberFormat.format(Math.round(phase.students * progress))}</strong>
             <strong className="home-visually-hidden">{numberFormat.format(phase.students)}</strong>
-            <span>{phase.studentLabel}</span>
+            <span><T v={phase.studentLabel} /></span>
             <div className="home-impact-bar" aria-hidden="true">
               <div style={{ width: (phase.students * progress / 6000 * 100) + '%' }} />
             </div>
             <dl>
-              <div><dt>sekolah terlibat</dt><dd>{phase.schools}</dd></div>
-              <div><dt>{phase.teacherLabel}</dt><dd>{phase.teachers}</dd></div>
+              <div><dt><Bi id="sekolah terlibat" en="schools involved" /></dt><dd>{phase.schools}</dd></div>
+              <div><dt><T v={phase.teacherLabel} /></dt><dd>{phase.teachers}</dd></div>
             </dl>
           </div>
         </article>
@@ -233,6 +251,7 @@ export function CurriculumTabs() {
   const [active, setActive] = useState(0);
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
   const tabsId = useId();
+  const text = useText();
 
   function handleTabKeys(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     const last = curriculum.length - 1;
@@ -262,10 +281,10 @@ export function CurriculumTabs() {
 
   return (
     <div className="home-curriculum-tabs">
-      <div className="home-tab-list" role="tablist" aria-label="Topik kurikulum">
+      <div className="home-tab-list" role="tablist" aria-label={text({ id: 'Topik kurikulum', en: 'Curriculum topics' })}>
         {curriculum.map((track, index) => (
           <button
-            key={track.label}
+            key={track.label.id}
             type="button"
             role="tab"
             id={tabsId + '-tab-' + index}
@@ -277,15 +296,15 @@ export function CurriculumTabs() {
             onClick={() => setActive(index)}
           >
             <span className="home-tab-number" aria-hidden="true">{twoDigits(index)}</span>
-            <span className="home-tab-label">{track.label}</span>
-            <span className="home-tab-count">{track.count}</span>
+            <span className="home-tab-label"><T v={track.label} /></span>
+            <span className="home-tab-count"><T v={track.count} /></span>
             <HomeIcon name="arrow" size={15} />
           </button>
         ))}
       </div>
       {curriculum.map((track, index) => (
         <div
-          key={track.label}
+          key={track.label.id}
           className="home-lesson-panel"
           role="tabpanel"
           id={tabsId + '-panel-' + index}
@@ -296,15 +315,15 @@ export function CurriculumTabs() {
         >
           <div className="home-lesson-intro">
             <HomeIcon name={track.icon} size={46} />
-            <h3>{track.title}</h3>
-            <p>{track.description}</p>
-            <strong>{track.tools}</strong>
+            <h3><T v={track.title} /></h3>
+            <p><T v={track.description} /></p>
+            <strong><T v={track.tools} /></strong>
           </div>
           <ol className="home-lesson-list">
             {track.lessons.map((lesson, lessonIndex) => (
-              <li key={lesson.title}>
+              <li key={lesson.title.id}>
                 <span className="home-lesson-number" aria-hidden="true">{twoDigits(lessonIndex)}</span>
-                <div><strong>{lesson.title}</strong>{lesson.detail && <small>{lesson.detail}</small>}</div>
+                <div><strong><T v={lesson.title} /></strong>{lesson.detail && <small><T v={lesson.detail} /></small>}</div>
               </li>
             ))}
           </ol>
@@ -317,6 +336,7 @@ export function CurriculumTabs() {
 export function FeaturedProjectCarousel({ heading, children }: { heading: ReactNode; children: ReactNode }) {
   const track = useRef<HTMLUListElement>(null);
   const [edges, setEdges] = useState({ start: true, end: false });
+  const text = useText();
 
   function updateEdges() {
     const element = track.current;
@@ -354,16 +374,16 @@ export function FeaturedProjectCarousel({ heading, children }: { heading: ReactN
       <div className="home-section-heading home-showcase-heading">
         {heading}
         <div className="home-project-controls">
-          <span>Geser untuk melihat karya</span>
-          <button type="button" aria-label="Karya sebelumnya" aria-controls="karya-track" disabled={edges.start} onClick={() => move(-1)}>
+          <span><Bi id="Geser untuk melihat karya" en="Swipe to see projects" /></span>
+          <button type="button" aria-label={text({ id: 'Karya sebelumnya', en: 'Previous project' })} aria-controls="karya-track" disabled={edges.start} onClick={() => move(-1)}>
             <HomeIcon name="back" size={17} />
           </button>
-          <button type="button" aria-label="Karya berikutnya" aria-controls="karya-track" disabled={edges.end} onClick={() => move(1)}>
+          <button type="button" aria-label={text({ id: 'Karya berikutnya', en: 'Next project' })} aria-controls="karya-track" disabled={edges.end} onClick={() => move(1)}>
             <HomeIcon name="arrow" size={17} />
           </button>
         </div>
       </div>
-      <ul id="karya-track" className="home-featured-track" aria-label="Sorotan karya siswa" tabIndex={0} ref={track} onScroll={updateEdges}>
+      <ul id="karya-track" className="home-featured-track" aria-label={text({ id: 'Sorotan karya siswa', en: 'Featured student projects' })} tabIndex={0} ref={track} onScroll={updateEdges}>
         {children}
       </ul>
     </>
@@ -373,6 +393,7 @@ export function FeaturedProjectCarousel({ heading, children }: { heading: ReactN
 export function FooterRobot() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [awake, setAwake] = useState(false);
+  const text = useText();
 
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
@@ -387,6 +408,8 @@ export function FooterRobot() {
     }, 3000);
   }
 
+  const greeting = text({ id: 'Halo! Ayo jelajahi programnya.', en: 'Hi! Let’s explore the program.' });
+
   return (
     <div className="home-footer-mascot">
       <button
@@ -394,12 +417,12 @@ export function FooterRobot() {
         className="home-footer-robot"
         onClick={wakeUp}
         data-awake={awake}
-        aria-label="Bangunkan robot AI Builder"
+        aria-label={text({ id: 'Bangunkan robot AI Builder', en: 'Wake up the AI Builder robot' })}
       >
         <Image unoptimized src={footerRobot} alt="" />
-        <span aria-hidden="true">{awake ? 'Halo! Ayo jelajahi programnya.' : 'Zzzâ€¦ klik untuk bangunkan'}</span>
+        <span aria-hidden="true">{awake ? greeting : text({ id: 'Zzz… klik untuk bangunkan', en: 'Zzz… click to wake me up' })}</span>
       </button>
-      <span role="status" className="home-visually-hidden">{awake ? 'Halo! Ayo jelajahi programnya.' : ''}</span>
+      <span role="status" className="home-visually-hidden">{awake ? greeting : ''}</span>
     </div>
   );
 }

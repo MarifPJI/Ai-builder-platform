@@ -5,6 +5,7 @@ import { ShowcaseSection } from '@/components/public/ShowcaseSection';
 import { GallerySection } from '@/components/public/GallerySection';
 import { SubmitProjectForm } from '@/components/public/SubmitProjectForm';
 import './homepage.css';
+import './homepage-motion.css';
 
 export const dynamic = 'force-dynamic';
 
