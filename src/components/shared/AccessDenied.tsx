@@ -1,3 +1,5 @@
+import { PUBLIC_SITE_URL } from '@/lib/site';
+
 /**
  * AccessDenied — layar `X04` (Akses Ditolak) berbahasa Indonesia.
  *
@@ -28,7 +30,7 @@ export function AccessDenied({ message }: AccessDeniedProps) {
               'Anda ini keliru, silakan hubungi Admin program.'}
         </p>
         <a
-          href="/"
+          href={PUBLIC_SITE_URL}
           className="mt-6 inline-flex items-center justify-center rounded-full bg-primary px-5 py-2 text-sm font-medium text-white hover:bg-primary-hover"
         >
           Kembali ke Beranda
