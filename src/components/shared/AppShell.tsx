@@ -100,7 +100,6 @@ export function AppShell({ brand, nav, schoolLabel, avatarInitials, children }: 
         <header className="app-topbar">
           <div className="app-topbar-start">
             <button ref={toggleRef} type="button" onClick={() => setSidebarOpen(!expanded)} aria-label={expanded ? 'Sembunyikan menu' : 'Tampilkan menu'} aria-expanded={expanded} aria-controls="app-navigation" className="app-icon-button app-menu-toggle"><AppIcon name="menu" /></button>
-            <button type="button" className="app-search" aria-label="Pencarian cepat"><AppIcon name="search" /><span>Cari</span><kbd>⌘K</kbd></button>
           </div>
           <div className="app-topbar-actions">
             <button type="button" aria-label="Notifikasi" className="app-icon-button app-notifications"><AppIcon name="bell" /></button>

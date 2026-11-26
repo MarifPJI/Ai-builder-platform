@@ -2,7 +2,6 @@ import { AppShell } from '@/components/shared/AppShell';
 import { teacherNav } from '@/components/shared/teacherNav';
 import { requireSession } from '@/lib/auth/guard';
 import { listClasses, listStudents, type ClassStudent } from '@/lib/domain/class-service';
-import { listPublished } from '@/lib/domain/material-service';
 import { getSchoolName } from '@/lib/domain/school-service';
 
 import { KelasSesiPanels } from './KelasSesiPanels';
@@ -10,7 +9,7 @@ import { KelasSesiPanels } from './KelasSesiPanels';
 /**
  * Kelas (`/teacher/kelas`) — Server Component.
  *
- * Mengambil daftar kelas, materi terbit, dan (jika `?classId=` ada) daftar siswa
+ * Mengambil daftar kelas dan (jika `?classId=` ada) daftar siswa
  * kelas terpilih. Merender KelasSesiPanels ('use client') untuk form pembuatan
  * kelas dan penambahan roster (Input Sekaligus / Satu per Satu). Penjadwalan sesi
  * dipindah ke halaman /teacher/sesi.
@@ -25,7 +24,7 @@ export default async function TeacherKelasPage({
   const claims = await requireSession({ requireRole: 'teacher' });
   const schoolName = (await getSchoolName(claims, claims.schoolId!)) ?? 'Sekolah Anda';
 
-  const [classes, materials] = await Promise.all([listClasses(claims), listPublished(claims)]);
+  const classes = await listClasses(claims);
 
   const selectedClassId = searchParams?.classId ?? classes[0]?.id ?? null;
   let students: ClassStudent[] = [];
@@ -46,7 +45,6 @@ export default async function TeacherKelasPage({
       </div>
       <KelasSesiPanels
         classes={classes}
-        materials={materials.map((m) => ({ id: m.id, title: m.title }))}
         selectedClassId={selectedClassId}
         students={students}
       />

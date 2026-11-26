@@ -20,25 +20,18 @@ import {
 const INIT: TeacherFormState = { status: 'idle' };
 const ROSTER_INIT: RosterFormState = { status: 'idle' };
 
-interface MaterialLite {
-  id: string;
-  title: string;
-}
-
 export function KelasSesiPanels({
   classes,
-  materials,
   selectedClassId,
   students,
 }: {
   classes: ClassSummary[];
-  materials: MaterialLite[];
   selectedClassId: string | null;
   students: ClassStudent[];
 }) {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <CreateClassPanel materials={materials} />
+      <CreateClassPanel />
       <ClassRosterPanel
         classes={classes}
         initialSelectedClassId={selectedClassId}
@@ -50,7 +43,7 @@ export function KelasSesiPanels({
 
 /* ── KIRI: Buat kelas (form kelas saja) ─────────────────────────────────────── */
 
-function CreateClassPanel({ materials }: { materials: MaterialLite[] }) {
+function CreateClassPanel() {
   const [state, action] = useFormState(createClassAction, INIT);
   return (
     <Card>
@@ -59,23 +52,6 @@ function CreateClassPanel({ materials }: { materials: MaterialLite[] }) {
         <form action={action} className="space-y-3">
           <StateToast state={state} />
           <Field name="name" label="Nama Kelas" />
-          <Field name="gradeLevel" label="Jenjang/Tingkat (opsional)" required={false} />
-          <div>
-            <label className="mb-1 block text-sm font-medium text-ink">
-              Materi Pegangan (opsional)
-            </label>
-            <select
-              name="materialId"
-              className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-teal"
-            >
-              <option value="">— Tidak dipilih —</option>
-              {materials.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.title}
-                </option>
-              ))}
-            </select>
-          </div>
           <SubmitBtn label="Buat Kelas" pendingLabel="Menyimpan…" />
         </form>
       </CardBody>
