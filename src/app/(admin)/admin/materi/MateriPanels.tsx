@@ -662,9 +662,7 @@ function MaterialListPanel({
                   ✎ Edit &amp; Kelola Sumber
                 </button>
                 <a
-                  href={`/teacher/materi?materialId=${m.id}`}
-                  target="_blank"
-                  rel="noreferrer"
+                  href={`/admin/materi/pratinjau?materialId=${encodeURIComponent(m.id)}`}
                   className="rounded-full border border-line px-4 py-1.5 text-sm text-ink hover:bg-soft"
                 >
                   Pratinjau Guru →

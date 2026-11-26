@@ -24,7 +24,15 @@ interface MaterialListItem {
   title: string;
   timeAllocation: string | null;
   summary: ResourceSummary;
+  /** Hanya diisi di pratinjau Admin (Guru hanya melihat Materi terbit). */
+  publishStatus?: 'draft' | 'published';
 }
+
+/**
+ * `teacher`: tampilan Guru (tombol "Tandai Sudah Dibaca").
+ * `admin`  : pratinjau Admin — tampilan sama, tanpa penanda baca, plus label Draf.
+ */
+export type MateriBrowserMode = 'teacher' | 'admin';
 
 /** Sumber siap-tampil: URL Canva/Video sudah dinormalisasi; berkas sudah dipresign. */
 export interface ViewerResource {
@@ -43,6 +51,7 @@ interface Detail {
   summary: string | null;
   keyPoints: string | null;
   resources: ViewerResource[];
+  publishStatus?: 'draft' | 'published';
 }
 
 const TYPE_LABEL: Record<ResourceType, string> = {
@@ -67,21 +76,28 @@ export function MateriBrowser({
   materials,
   selectedId,
   detail,
+  mode = 'teacher',
+  basePath = '/teacher/materi',
 }: {
   materials: MaterialListItem[];
   selectedId: string | null;
   detail: Detail | null;
+  mode?: MateriBrowserMode;
+  /** Halaman tujuan tautan daftar Materi (`?materialId=` ditambahkan). */
+  basePath?: string;
 }) {
   return (
     <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-      <MaterialList materials={materials} selectedId={selectedId} />
+      <MaterialList materials={materials} selectedId={selectedId} basePath={basePath} />
       {detail ? (
-        <MaterialDetail detail={detail} />
+        <MaterialDetail detail={detail} mode={mode} />
       ) : (
         <Card>
           <CardBody>
             <p className="py-10 text-center text-sm text-muted">
-              Belum ada Materi terbit. Hubungi Admin.
+              {mode === 'admin'
+                ? 'Materi tidak ditemukan. Pilih Materi dari daftar.'
+                : 'Belum ada Materi terbit. Hubungi Admin.'}
             </p>
           </CardBody>
         </Card>
@@ -90,14 +106,24 @@ export function MateriBrowser({
   );
 }
 
+function DraftBadge() {
+  return (
+    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+      DRAF
+    </span>
+  );
+}
+
 /* ── Kolom kiri: daftar Materi ──────────────────────────────────────────── */
 
 function MaterialList({
   materials,
   selectedId,
+  basePath,
 }: {
   materials: MaterialListItem[];
   selectedId: string | null;
+  basePath: string;
 }) {
   return (
     <Card>
@@ -111,14 +137,18 @@ function MaterialList({
             return (
               <a
                 key={m.id}
-                href={`/teacher/materi?materialId=${m.id}`}
+                href={`${basePath}?materialId=${encodeURIComponent(m.id)}`}
+                aria-current={active ? 'page' : undefined}
                 className={
                   active
                     ? 'block rounded-2xl border border-primary bg-primary-soft/40 p-3'
                     : 'block rounded-2xl border border-line p-3 hover:bg-soft'
                 }
               >
-                <p className="text-sm font-medium text-ink">{m.title}</p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium text-ink">{m.title}</p>
+                  {m.publishStatus === 'draft' ? <DraftBadge /> : null}
+                </div>
                 {m.timeAllocation ? (
                   <p className="text-xs text-muted">{m.timeAllocation}</p>
                 ) : null}
@@ -141,7 +171,7 @@ function MaterialList({
 
 /* ── Kolom kanan: detail materi + viewer ────────────────────────────────── */
 
-function MaterialDetail({ detail }: { detail: Detail }) {
+function MaterialDetail({ detail, mode }: { detail: Detail; mode: MateriBrowserMode }) {
   const [activeId, setActiveId] = useState<string | null>(detail.resources[0]?.id ?? null);
   const [marked, setMarked] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -180,15 +210,18 @@ function MaterialDetail({ detail }: { detail: Detail }) {
               <span className="rounded-full bg-indigo-soft px-3 py-1 text-xs font-medium text-indigo">
                 {detail.resources.length} Sumber Materi Tersedia
               </span>
+              {detail.publishStatus === 'draft' ? <DraftBadge /> : null}
             </div>
-            <button
-              type="button"
-              onClick={markRead}
-              disabled={pending || marked}
-              className="rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
-            >
-              {marked ? 'Sudah Dibaca ✓' : 'Tandai Sudah Dibaca'}
-            </button>
+            {mode === 'teacher' ? (
+              <button
+                type="button"
+                onClick={markRead}
+                disabled={pending || marked}
+                className="rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+              >
+                {marked ? 'Sudah Dibaca ✓' : 'Tandai Sudah Dibaca'}
+              </button>
+            ) : null}
           </div>
           <h2 className="mt-3 text-lg font-semibold text-ink">{detail.title}</h2>
           {detail.summary ? (
