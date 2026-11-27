@@ -13,7 +13,6 @@ const ITEMS: Omit<AppShellNavItem, 'active'>[] = [
   { label: 'Akun Guru', href: '/admin/teachers' },
   { label: 'Materi', href: '/admin/materi' },
   { label: 'Showcase Karya', href: '/admin/karya' },
-  { label: 'Galeri', href: '/admin/galeri' },
   { label: 'Kiriman', href: '/admin/submissions' },
 ];
 

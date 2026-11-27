@@ -39,14 +39,12 @@ export default async function AdminDashboardPage() {
 
   const schools = counts?.schools ?? null;
   const karya = counts?.karya ?? null;
-  const galeri = counts?.galeri ?? null;
   const submissions = counts?.submissions ?? null;
   const pendingSubmissions = counts?.pendingSubmissions ?? null;
 
   const stats = [
     { label: 'Sekolah Mitra', value: schools, href: '/admin/schools', note: null },
     { label: 'Showcase Karya', value: karya, href: '/admin/karya', note: null },
-    { label: 'Item Galeri', value: galeri, href: '/admin/galeri', note: null },
     {
       label: 'Kiriman Proyek',
       value: submissions,
@@ -67,7 +65,7 @@ export default async function AdminDashboardPage() {
         </p>
       </PageIntro>
 
-      <div className="app-stats grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="app-stats app-stats-3 grid gap-4 sm:grid-cols-3">
         {stats.map((s) => (
           <a key={s.href} href={s.href}>
             <Card className="transition-shadow hover:shadow-md">

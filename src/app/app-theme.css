@@ -97,6 +97,7 @@
 .app-stats > a:hover .ui-card { border-color: #b9a5ce; box-shadow: 0 7px 18px #24205209; transform: translateY(-2px); }
 .app-stats > a:first-child .ui-card { background: var(--app-mint); border-color: #86cfc5; }
 .app-stats > a:first-child .ui-card :is(.text-muted, .text-primary) { color: #285954; }
+.app-stats.app-stats-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .app-stats-secondary .ui-card-body { min-height: 142px; }
 .app-stats-secondary > a:first-child .ui-card { background: #eee7f7; border-color: #d8cde8; }
 .app-stats-secondary > a:first-child .ui-card .text-muted { color: #625674; }
@@ -283,7 +284,7 @@
   .auth-story h2 { font-size: 28px; max-width: 190px; }
   .auth-illustration { right: -12px; width: 125px; }
   .auth-illustration img { width: 125px; height: 125px; }
-  .app-stats { grid-template-columns: 1fr; }
+  .app-stats, .app-stats.app-stats-3 { grid-template-columns: 1fr; }
   .app-stats .ui-card-body { min-height: 120px; }
   .app-eyebrow { letter-spacing: .5px; }
 }
