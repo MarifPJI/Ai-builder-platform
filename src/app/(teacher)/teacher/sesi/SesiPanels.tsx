@@ -1,11 +1,17 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 
 import { Card, CardBody, CardHead } from '@/components/ui/Card';
 import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/Table';
 import { Toast } from '@/components/ui/Toast';
 import type { ClassSummary } from '@/lib/domain/class-service';
+import {
+  buildSessionName,
+  planSessionOptions,
+  type SessionKind,
+} from '@/lib/domain/session-plan';
 
 import { scheduleSessionAction, type SesiFormState } from './actions';
 
@@ -19,6 +25,9 @@ const dateFmt = new Intl.DateTimeFormat('id-ID', {
   timeZone: 'Asia/Jakarta',
 });
 
+const SELECT_CLASS =
+  'w-full rounded-xl border border-line bg-white px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-teal';
+
 interface MaterialLite {
   id: string;
   title: string;
@@ -27,6 +36,10 @@ interface SessionLite {
   id: string;
   name: string;
   className: string;
+  classId: string;
+  materialId: string | null;
+  sessionKind: SessionKind | null;
+  partNumber: number | null;
   scheduledAt: string;
 }
 
@@ -41,7 +54,7 @@ export function SesiPanels({
 }) {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <ScheduleSessionPanel classes={classes} materials={materials} />
+      <ScheduleSessionPanel classes={classes} materials={materials} sessions={sessions} />
       <SessionListPanel sessions={sessions} />
     </div>
   );
@@ -52,11 +65,40 @@ export function SesiPanels({
 function ScheduleSessionPanel({
   classes,
   materials,
+  sessions,
 }: {
   classes: ClassSummary[];
   materials: MaterialLite[];
+  sessions: SessionLite[];
 }) {
   const [state, action] = useFormState(scheduleSessionAction, INIT);
+  const [classId, setClassId] = useState(classes[0]?.id ?? '');
+  const [materialId, setMaterialId] = useState(materials[0]?.id ?? '');
+  /** Pilihan eksplisit guru; null = pakai pilihan default rencana. */
+  const [kindChoice, setKindChoice] = useState<SessionKind | null>(null);
+
+  const plan = useMemo(
+    () =>
+      planSessionOptions(
+        sessions
+          .filter((s) => s.classId === classId && s.materialId === materialId)
+          .map((s) => ({ sessionKind: s.sessionKind, partNumber: s.partNumber })),
+      ),
+    [sessions, classId, materialId],
+  );
+
+  const selected =
+    plan.options.find((o) => o.kind === kindChoice) ??
+    plan.options.find((o) => o.kind === plan.defaultKind) ??
+    plan.options[0];
+  const materialTitle = materials.find((m) => m.id === materialId)?.title ?? '';
+
+  // Setelah sesi tersimpan, daftar sesi dimuat ulang (revalidatePath) dan
+  // pilihan kembali ke default rencana baru (mis. Sesi 1 → Sesi 2).
+  useEffect(() => {
+    if (state.status === 'ok') setKindChoice(null);
+  }, [state]);
+
   return (
     <Card>
       <CardHead title="Jadwalkan Sesi" />
@@ -69,11 +111,19 @@ function ScheduleSessionPanel({
           <form action={action} className="space-y-3">
             <StateToast state={state} />
             <div>
-              <label className="mb-1 block text-sm font-medium text-ink">Kelas</label>
+              <label htmlFor="sesi-class" className="mb-1 block text-sm font-medium text-ink">
+                Kelas
+              </label>
               <select
+                id="sesi-class"
                 name="classId"
                 required
-                className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-teal"
+                value={classId}
+                onChange={(e) => {
+                  setClassId(e.target.value);
+                  setKindChoice(null);
+                }}
+                className={SELECT_CLASS}
               >
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -83,11 +133,19 @@ function ScheduleSessionPanel({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-ink">Materi</label>
+              <label htmlFor="sesi-material" className="mb-1 block text-sm font-medium text-ink">
+                Materi
+              </label>
               <select
+                id="sesi-material"
                 name="materialId"
                 required
-                className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-teal"
+                value={materialId}
+                onChange={(e) => {
+                  setMaterialId(e.target.value);
+                  setKindChoice(null);
+                }}
+                className={SELECT_CLASS}
               >
                 {materials.map((m) => (
                   <option key={m.id} value={m.id}>
@@ -96,15 +154,51 @@ function ScheduleSessionPanel({
                 ))}
               </select>
             </div>
-            <Field name="name" label="Nama Sesi" />
             <div>
-              <label className="mb-1 block text-sm font-medium text-ink">Tanggal &amp; Jam</label>
-              <input
-                name="scheduledAt"
-                type="datetime-local"
+              <label htmlFor="sesi-kind" className="mb-1 block text-sm font-medium text-ink">
+                Sesi
+              </label>
+              <select
+                id="sesi-kind"
+                name="sessionKind"
                 required
-                className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-teal"
-              />
+                value={selected?.kind ?? ''}
+                onChange={(e) => setKindChoice(e.target.value as SessionKind)}
+                aria-describedby="sesi-kind-help"
+                className={SELECT_CLASS}
+              >
+                {plan.options.map((o) => (
+                  <option key={o.kind} value={o.kind}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              <div id="sesi-kind-help" className="mt-1.5 space-y-1">
+                {plan.finished ? (
+                  <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    Materi ini sudah selesai untuk kelas ini. Sesi tambahan tidak mengubah progres.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted">
+                    Pilih <strong>Sesi Penuh</strong> bila satu pertemuan menuntaskan Materi, atau{' '}
+                    <strong>Sesi Terakhir</strong> untuk pertemuan terakhir Materi ini.
+                  </p>
+                )}
+                {selected ? (
+                  <p className="text-xs text-muted">
+                    Tersimpan sebagai:{' '}
+                    <span className="font-medium text-ink">
+                      {buildSessionName(selected.kind, selected.partNumber, materialTitle)}
+                    </span>
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            <div>
+              <label htmlFor="sesi-at" className="mb-1 block text-sm font-medium text-ink">
+                Tanggal &amp; Jam
+              </label>
+              <input id="sesi-at" name="scheduledAt" type="datetime-local" required className={SELECT_CLASS} />
             </div>
             <SubmitBtn label="Jadwalkan Sesi" pendingLabel="Menjadwalkan…" />
           </form>
@@ -136,7 +230,10 @@ function SessionListPanel({ sessions }: { sessions: SessionLite[] }) {
               {sessions.map((s) => (
                 <TR key={s.id}>
                   <TD className="font-medium">{s.className}</TD>
-                  <TD>{s.name}</TD>
+                  <TD>
+                    <span>{s.name}</span>
+                    <KindBadge kind={s.sessionKind} />
+                  </TD>
                   <TD>{dateFmt.format(new Date(s.scheduledAt))}</TD>
                 </TR>
               ))}
@@ -148,29 +245,26 @@ function SessionListPanel({ sessions }: { sessions: SessionLite[] }) {
   );
 }
 
-/* ── Primitif bersama ───────────────────────────────────────────────────────── */
-
-function Field({
-  name,
-  label,
-  required = true,
-}: {
-  name: string;
-  label: string;
-  required?: boolean;
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-sm font-medium text-ink">{label}</label>
-      <input
-        name={name}
-        type="text"
-        required={required}
-        className="w-full rounded-xl border border-line bg-white px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-teal"
-      />
-    </div>
-  );
+/** Penanda sesi yang menuntaskan Materi (Selesai) atau sesi tambahan. */
+function KindBadge({ kind }: { kind: SessionKind | null }) {
+  if (kind === 'full' || kind === 'final') {
+    return (
+      <span className="ml-2 inline-block rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-semibold text-teal-700">
+        Selesai
+      </span>
+    );
+  }
+  if (kind === 'extra') {
+    return (
+      <span className="ml-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+        Tambahan
+      </span>
+    );
+  }
+  return null;
 }
+
+/* ── Primitif bersama ───────────────────────────────────────────────────────── */
 
 function StateToast({ state }: { state: SesiFormState }) {
   if (state.status === 'idle' || !state.message) return null;

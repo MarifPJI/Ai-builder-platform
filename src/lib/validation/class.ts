@@ -27,19 +27,39 @@ export const createClassSchema = z.object({
 });
 export type CreateClassInput = z.infer<typeof createClassSchema>;
 
-/** Skema penjadwalan Sesi (R6.1). `scheduledAt` ISO 8601 → disimpan timestamptz UTC. */
-export const scheduleSessionSchema = z.object({
-  classId: z.string().uuid({ message: 'Kelas tidak valid.' }),
-  materialId: z.string().uuid({ message: 'Materi tidak valid.' }),
-  name: z
-    .string({ required_error: 'Nama sesi wajib diisi.' })
-    .trim()
-    .min(1, { message: 'Nama sesi wajib diisi.' })
-    .max(SESSION_NAME_MAX, { message: `Nama sesi maksimum ${SESSION_NAME_MAX} karakter.` }),
-  scheduledAt: z
-    .string({ required_error: 'Tanggal & jam sesi wajib diisi.' })
-    .datetime({ offset: true, message: 'Tanggal & jam sesi tidak valid.' }),
-});
+/**
+ * Skema penjadwalan Sesi (R6.1). `scheduledAt` ISO 8601 → disimpan timestamptz UTC.
+ *
+ * Dua bentuk masukan:
+ *   - `sessionKind` diisi (form baru): nama sesi DIBUAT server dari tipe + judul
+ *     Materi; `name` diabaikan.
+ *   - `sessionKind` kosong (kompatibilitas lama): `name` teks bebas wajib diisi.
+ * Nilai tipe sengaja ditulis literal (bukan impor dari session-plan) untuk
+ * menghindari impor melingkar.
+ */
+export const scheduleSessionSchema = z
+  .object({
+    classId: z.string().uuid({ message: 'Kelas tidak valid.' }),
+    materialId: z.string().uuid({ message: 'Materi tidak valid.' }),
+    sessionKind: z
+      .enum(['full', 'part', 'final', 'extra'], {
+        errorMap: () => ({ message: 'Jenis sesi tidak valid.' }),
+      })
+      .optional(),
+    name: z
+      .string()
+      .trim()
+      .max(SESSION_NAME_MAX, { message: `Nama sesi maksimum ${SESSION_NAME_MAX} karakter.` })
+      .optional(),
+    scheduledAt: z
+      .string({ required_error: 'Tanggal & jam sesi wajib diisi.' })
+      .datetime({ offset: true, message: 'Tanggal & jam sesi tidak valid.' }),
+  })
+  .superRefine((value, ctx) => {
+    if (!value.sessionKind && !value.name) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: 'Nama sesi wajib diisi.' });
+    }
+  });
 export type ScheduleSessionInput = z.infer<typeof scheduleSessionSchema>;
 
 // Re-ekspor agar pemanggil punya satu tempat impor validasi school_id bentuk.

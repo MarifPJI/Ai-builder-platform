@@ -14,6 +14,12 @@ import type { SessionClaims } from '@/lib/auth/types';
 import { withTenantTransaction } from '@/lib/db/tenant-transaction';
 import { scheduleSessionSchema, type ScheduleSessionInput } from '@/lib/validation/class';
 
+import {
+  buildSessionName,
+  isSessionKind,
+  resolveSessionKind,
+  type SessionKind,
+} from './session-plan';
 import { teacherSchoolId } from './tenant-scope';
 
 export class SessionError extends Error {}
@@ -25,6 +31,17 @@ export interface SessionRow {
   materialId: string | null;
   name: string;
   scheduledAt: Date;
+  /** Tipe sesi (0022); null untuk sesi lama tanpa tipe. */
+  sessionKind: SessionKind | null;
+  partNumber: number | null;
+}
+
+function readKind(value: unknown): SessionKind | null {
+  return isSessionKind(value) ? value : null;
+}
+
+function readPart(value: unknown): number | null {
+  return value === null || value === undefined ? null : Number(value);
 }
 
 /**
@@ -60,26 +77,58 @@ export async function scheduleSession(
   const schoolId = teacherSchoolId(claims);
   return withTenantTransaction(claims, async (tx) => {
     // R6.2: class_id harus milik tenant (RLS + filter school_id eksplisit).
-    const cls = await tx.query(`SELECT 1 FROM classes WHERE id = $1 AND school_id = $2`, [
-      valid.classId,
-      schoolId,
-    ]);
+    // FOR UPDATE mengunci baris kelas agar dua permintaan bersamaan untuk kelas
+    // yang sama tidak mendapat nomor sesi yang sama.
+    const cls = await tx.query(
+      `SELECT 1 FROM classes WHERE id = $1 AND school_id = $2 FOR UPDATE`,
+      [valid.classId, schoolId],
+    );
     if (cls.rowCount === 0) {
       throw new SessionError('Kelas tidak ditemukan atau bukan milik sekolah Anda.');
     }
     // R6.3: material_id harus merujuk Materi published (Materi global).
-    const mat = await tx.query(
-      `SELECT 1 FROM materials WHERE id = $1 AND publish_status = 'published'`,
+    const mat = await tx.query<{ title: string }>(
+      `SELECT title FROM materials WHERE id = $1 AND publish_status = 'published'`,
       [valid.materialId],
     );
-    if (mat.rowCount === 0) {
+    const material = mat.rows[0];
+    if (!material) {
       throw new SessionError('Materi belum diterbitkan. Sesi tidak dapat dijadwalkan.');
     }
+
+    let name = valid.name ?? '';
+    let sessionKind: SessionKind | null = null;
+    let partNumber: number | null = null;
+
+    if (valid.sessionKind) {
+      // Nomor & aturan SELALU dihitung server dari sesi yang ada (klien tidak dipercaya).
+      const existing = await tx.query(
+        `SELECT session_kind, part_number FROM class_sessions
+          WHERE class_id = $1 AND material_id = $2 AND school_id = $3`,
+        [valid.classId, valid.materialId, schoolId],
+      );
+      const resolved = resolveSessionKind(
+        valid.sessionKind,
+        existing.rows.map((r: Record<string, unknown>) => ({
+          sessionKind: readKind(r.session_kind),
+          partNumber: readPart(r.part_number),
+        })),
+      );
+      if (!resolved.ok) throw new SessionError(resolved.message);
+      sessionKind = resolved.kind;
+      partNumber = resolved.partNumber;
+      name = buildSessionName(sessionKind, partNumber, material.title);
+    }
+
+    if (!name) throw new SessionError('Nama sesi wajib diisi.');
+
     const res = await tx.query<{ id: string }>(
-      `INSERT INTO class_sessions (class_id, school_id, material_id, name, scheduled_at)
-       SELECT c.id, c.school_id, $2, $3, $4 FROM classes c WHERE c.id = $1 AND c.school_id = $5
+      `INSERT INTO class_sessions
+              (class_id, school_id, material_id, name, scheduled_at, session_kind, part_number)
+       SELECT c.id, c.school_id, $2, $3, $4, $6, $7
+         FROM classes c WHERE c.id = $1 AND c.school_id = $5
        RETURNING id`,
-      [valid.classId, valid.materialId, valid.name, valid.scheduledAt, schoolId],
+      [valid.classId, valid.materialId, name, valid.scheduledAt, schoolId, sessionKind, partNumber],
     );
     const row = res.rows[0];
     if (!row) throw new SessionError('Gagal menjadwalkan sesi.');
@@ -92,7 +141,8 @@ export async function listSessions(claims: SessionClaims): Promise<SessionRow[]>
   const schoolId = teacherSchoolId(claims);
   return withTenantTransaction(claims, async (tx) => {
     const res = await tx.query(
-      `SELECT s.id, s.class_id, c.name AS class_name, s.material_id, s.name, s.scheduled_at
+      `SELECT s.id, s.class_id, c.name AS class_name, s.material_id, s.name, s.scheduled_at,
+              s.session_kind, s.part_number
          FROM class_sessions s
          JOIN classes c ON c.id = s.class_id
         WHERE s.school_id = $1 AND c.school_id = $1
@@ -106,6 +156,8 @@ export async function listSessions(claims: SessionClaims): Promise<SessionRow[]>
       materialId: (r.material_id as string | null) ?? null,
       name: r.name as string,
       scheduledAt: r.scheduled_at as Date,
+      sessionKind: readKind(r.session_kind),
+      partNumber: readPart(r.part_number),
     }));
   });
 }
@@ -121,6 +173,7 @@ export async function listSessionsWithStatus(
   return withTenantTransaction(claims, async (tx) => {
     const res = await tx.query(
       `SELECT s.id, s.class_id, c.name AS class_name, s.material_id, s.name, s.scheduled_at,
+              s.session_kind, s.part_number,
               (s.scheduled_at <= now()) AS is_due,
               EXISTS(SELECT 1 FROM session_attendance a
                       WHERE a.session_id = s.id AND a.school_id = s.school_id) AS has_attendance
@@ -137,6 +190,8 @@ export async function listSessionsWithStatus(
       materialId: (r.material_id as string | null) ?? null,
       name: r.name as string,
       scheduledAt: r.scheduled_at as Date,
+      sessionKind: readKind(r.session_kind),
+      partNumber: readPart(r.part_number),
       isDue: r.is_due as boolean,
       hasAttendance: r.has_attendance as boolean,
     }));

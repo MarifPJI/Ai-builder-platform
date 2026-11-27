@@ -46,6 +46,10 @@ export default async function TeacherSesiPage() {
           id: s.id,
           name: s.name,
           className: s.className,
+          classId: s.classId,
+          materialId: s.materialId,
+          sessionKind: s.sessionKind,
+          partNumber: s.partNumber,
           scheduledAt: s.scheduledAt.toISOString(),
         }))}
       />

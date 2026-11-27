@@ -206,6 +206,26 @@ CREATE INDEX IF NOT EXISTS idx_class_students_school ON class_students (school_i
 CREATE INDEX IF NOT EXISTS idx_class_sessions_class  ON class_sessions (class_id);
 CREATE INDEX IF NOT EXISTS idx_class_sessions_school ON class_sessions (school_id);
 
+-- Tipe sesi terstruktur (0022): full | part | final | extra; part_number untuk part/final.
+ALTER TABLE class_sessions ADD COLUMN IF NOT EXISTS session_kind text;
+ALTER TABLE class_sessions ADD COLUMN IF NOT EXISTS part_number  smallint;
+ALTER TABLE class_sessions DROP CONSTRAINT IF EXISTS class_sessions_session_kind_check;
+ALTER TABLE class_sessions
+  ADD CONSTRAINT class_sessions_session_kind_check
+  CHECK (session_kind IS NULL OR session_kind IN ('full', 'part', 'final', 'extra'));
+ALTER TABLE class_sessions DROP CONSTRAINT IF EXISTS class_sessions_part_number_range;
+ALTER TABLE class_sessions
+  ADD CONSTRAINT class_sessions_part_number_range
+  CHECK (part_number IS NULL OR part_number BETWEEN 1 AND 50);
+ALTER TABLE class_sessions DROP CONSTRAINT IF EXISTS class_sessions_kind_number_consistent;
+ALTER TABLE class_sessions
+  ADD CONSTRAINT class_sessions_kind_number_consistent
+  CHECK (
+    (session_kind IN ('part', 'final') AND part_number IS NOT NULL) OR
+    ((session_kind IS NULL OR session_kind IN ('full', 'extra')) AND part_number IS NULL)
+  );
+CREATE INDEX IF NOT EXISTS idx_class_sessions_class_material ON class_sessions (class_id, material_id);
+
 -- ---- showcase_projects, stem_gallery_items (0009 + 0020) -------------------
 CREATE TABLE IF NOT EXISTS showcase_projects (
     id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),

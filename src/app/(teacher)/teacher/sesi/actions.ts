@@ -2,7 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { ZodError } from 'zod';
+
 import { requireSession } from '@/lib/auth/guard';
+import { isSessionKind, type SessionKind } from '@/lib/domain/session-plan';
 import { scheduleSession, SessionError } from '@/lib/domain/session-service';
 
 /**
@@ -63,20 +66,32 @@ export async function scheduleSessionAction(
   const classId = String(formData.get('classId') ?? '').trim();
   const materialId = String(formData.get('materialId') ?? '').trim();
   const name = String(formData.get('name') ?? '').trim();
+  const sessionKindRaw = String(formData.get('sessionKind') ?? '').trim();
   const scheduledAtRaw = String(formData.get('scheduledAt') ?? '').trim();
 
   const scheduledAt = scheduledAtRaw ? toIso(scheduledAtRaw) : null;
   if (!scheduledAt) {
     return { status: 'error', message: 'Tanggal & jam sesi tidak valid.' };
   }
+  if (sessionKindRaw && !isSessionKind(sessionKindRaw)) {
+    return { status: 'error', message: 'Jenis sesi tidak valid.' };
+  }
 
   try {
-    await scheduleSession(claims, { classId, materialId, name, scheduledAt });
+    await scheduleSession(claims, {
+      classId,
+      materialId,
+      scheduledAt,
+      ...(sessionKindRaw ? { sessionKind: sessionKindRaw as SessionKind } : { name }),
+    });
     revalidatePath('/teacher/sesi');
     revalidatePath('/teacher');
     return { status: 'ok', message: 'Sesi berhasil dijadwalkan.' };
   } catch (err) {
     if (err instanceof SessionError) return { status: 'error', message: err.message };
+    if (err instanceof ZodError) {
+      return { status: 'error', message: err.issues[0]?.message ?? 'Masukan sesi tidak valid.' };
+    }
     return { status: 'error', message: 'Gagal menjadwalkan sesi. Silakan coba lagi.' };
   }
 }
