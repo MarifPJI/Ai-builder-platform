@@ -23,6 +23,7 @@ import type {
   SchoolExportHeader,
   SchoolRosterExportRow,
 } from '@/lib/domain/admin-export-service';
+import type { SchoolProgressRow } from '@/lib/domain/admin-progress-service';
 import type { AttendanceStatus } from '@/lib/validation/attendance';
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -181,6 +182,7 @@ function appendDataRow(
 export async function buildGlobalWorkbook(
   summary: GlobalSchoolSummaryRow[],
   sessions: NationalSessionRow[],
+  progress?: SchoolProgressRow[],
 ): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
 
@@ -252,6 +254,53 @@ export async function buildGlobalWorkbook(
     ]);
   });
   autoFitColumns(s2);
+
+  /* Sheet 3 — Progres Mengajar (opsional, bila data progres tersedia) */
+  if (progress) {
+    const s3 = wb.addWorksheet('Progres Mengajar');
+    const s3Header = s3.addRow([
+      'No',
+      'Nama Sekolah',
+      'Guru',
+      'Progres (%)',
+      'Pelajaran Tuntas',
+      'Target Pelajaran',
+      'Kelas Tuntas 10 Pelajaran',
+      'Rincian per Kelas',
+      'Jumlah Kelas',
+      'Jumlah Siswa',
+      'Sesi Selesai',
+      'Sesi Terjadwal',
+      'Kehadiran (%)',
+      'Sesi Terdokumentasi',
+      'Aktivitas Terakhir',
+      'Keterangan',
+    ]);
+    styleHeaderRow(s3Header);
+    progress.forEach((row, index) => {
+      appendDataRow(s3, [
+        index + 1,
+        row.schoolName,
+        row.teacherNames ?? '-',
+        row.progress.percent,
+        row.progress.covered,
+        row.progress.target,
+        row.progress.classesAtTarget,
+        row.pelajaranPerKelas.length
+          ? row.pelajaranPerKelas.map((c) => `${c.className}: ${c.completed}/10`).join('; ')
+          : '-',
+        row.jumlahKelas,
+        row.jumlahSiswa,
+        row.sesiSelesai,
+        row.sesiTerjadwal,
+        row.kehadiranPersen ?? '-',
+        row.sesiTerdokumentasi,
+        row.lastActivity ? formatWibDateTime(row.lastActivity) : '-',
+        row.isTest ? 'Sekolah uji coba' : row.progress.achieved ? 'Target tercapai' : '-',
+      ]);
+    });
+    autoFitColumns(s3);
+  }
 
   return Buffer.from(await wb.xlsx.writeBuffer());
 }

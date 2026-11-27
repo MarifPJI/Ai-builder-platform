@@ -16,6 +16,7 @@ import {
   getGlobalSchoolSummary,
   listNationalSessions,
 } from '@/lib/domain/admin-export-service';
+import { getTeachingProgress } from '@/lib/domain/admin-progress-service';
 import { buildGlobalWorkbook, todayStampJakarta } from '@/lib/excel/workbook';
 
 export const dynamic = 'force-dynamic';
@@ -35,11 +36,16 @@ export async function GET(): Promise<Response> {
   }
 
   // 2. Agregasi data + bangun workbook.
-  const [summary, sessions] = await Promise.all([
+  const [summary, sessions, progress] = await Promise.all([
     getGlobalSchoolSummary(claims),
     listNationalSessions(claims),
+    // Fail-soft: bila progres gagal dimuat, ekspor tetap berjalan tanpa sheet itu.
+    getTeachingProgress(claims).catch((error: unknown) => {
+      console.error('[export] getTeachingProgress gagal:', error);
+      return null;
+    }),
   ]);
-  const buf = await buildGlobalWorkbook(summary, sessions);
+  const buf = await buildGlobalWorkbook(summary, sessions, progress?.schools);
 
   // 3. Kirim sebagai lampiran .xlsx.
   const filename = `Rekap_Nasional_AI_Builder_${todayStampJakarta()}.xlsx`;
