@@ -31,7 +31,7 @@ export default async function KaryaDetailPage({
         <article className="mt-4 rounded-card border border-line bg-white p-6 md:p-8">
           <div className="mb-3 flex items-center gap-2">
             <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-medium text-primary">
-              Inovasi Siswa
+              {karya.type === 'student' ? 'Proyek Siswa' : 'Inovasi Guru'}
             </span>
             <span className="text-xs text-muted">{karya.category}</span>
           </div>
