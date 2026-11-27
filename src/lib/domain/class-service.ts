@@ -13,6 +13,8 @@ import type { SessionClaims } from '@/lib/auth/types';
 import { withTenantTransaction } from '@/lib/db/tenant-transaction';
 import { createClassSchema, type CreateClassInput } from '@/lib/validation/class';
 
+import { teacherSchoolId } from './tenant-scope';
+
 export interface ClassSummary {
   id: string;
   name: string;
@@ -53,14 +55,17 @@ export async function createClass(
 
 /** Daftar Kelas milik Guru (tenant) beserta jumlah siswa (R5.3). */
 export async function listClasses(claims: SessionClaims): Promise<ClassSummary[]> {
+  const schoolId = teacherSchoolId(claims);
   return withTenantTransaction(claims, async (tx) => {
     const res = await tx.query(
       `SELECT c.id, c.name, c.grade_level, c.material_id, c.created_at,
               COUNT(cs.id)::int AS student_count
          FROM classes c
-         LEFT JOIN class_students cs ON cs.class_id = c.id
+         LEFT JOIN class_students cs ON cs.class_id = c.id AND cs.school_id = c.school_id
+        WHERE c.school_id = $1
         GROUP BY c.id
         ORDER BY c.created_at DESC`,
+      [schoolId],
     );
     return res.rows.map((r: Record<string, unknown>) => ({
       id: r.id as string,
@@ -78,11 +83,12 @@ export async function listStudents(
   claims: SessionClaims,
   classId: string,
 ): Promise<ClassStudent[]> {
+  const schoolId = teacherSchoolId(claims);
   return withTenantTransaction(claims, async (tx) => {
     const res = await tx.query(
       `SELECT id, nis, full_name FROM class_students
-        WHERE class_id = $1 ORDER BY full_name ASC`,
-      [classId],
+        WHERE class_id = $1 AND school_id = $2 ORDER BY full_name ASC`,
+      [classId, schoolId],
     );
     return res.rows.map((r: Record<string, unknown>) => ({
       id: r.id as string,

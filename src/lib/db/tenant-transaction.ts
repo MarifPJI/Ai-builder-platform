@@ -137,6 +137,35 @@ function deriveTenantContext(claims: SessionClaims): TenantContext {
   };
 }
 
+let rlsRoleChecked = false;
+
+/**
+ * RLS TIDAK berlaku bagi role superuser/BYPASSRLS (mis. `postgres` di Supabase),
+ * bahkan dengan FORCE ROW LEVEL SECURITY. Bila `DATABASE_URL` memakai role
+ * seperti itu, isolasi antar-sekolah hanya bergantung pada filter eksplisit di
+ * query. Fungsi ini menulis peringatan keras ke log server agar salah konfigurasi
+ * terlihat. Kegagalan pemeriksaan tidak menggagalkan transaksi.
+ */
+async function warnIfRoleBypassesRls(client: PoolClient): Promise<void> {
+  try {
+    await client.query('SAVEPOINT rls_role_check');
+    const res = await client.query<{ role: string; bypass: boolean }>(
+      `SELECT current_user AS role, (rolsuper OR rolbypassrls) AS bypass
+         FROM pg_roles WHERE rolname = current_user`,
+    );
+    await client.query('RELEASE SAVEPOINT rls_role_check');
+    const row = res.rows[0];
+    if (row?.bypass) {
+      console.error(
+        `[db] PERINGATAN KEAMANAN: role koneksi "${row.role}" melewati RLS. ` +
+          'Ganti DATABASE_URL agar memakai role `app_runtime` (lihat .env.example).',
+      );
+    }
+  } catch {
+    await client.query('ROLLBACK TO SAVEPOINT rls_role_check').catch(() => undefined);
+  }
+}
+
 /**
  * Menjalankan `fn` di dalam satu transaksi dengan konteks tenancy RLS terset.
  *
@@ -171,6 +200,12 @@ export async function withTenantTransaction<T>(
       'SELECT set_config($1, $2, true), set_config($3, $4, true)',
       [SESSION_VAR_ROLE, context.role, SESSION_VAR_SCHOOL_ID, context.schoolId],
     );
+
+    // Sekali per instance: peringatkan bila role koneksi melewati RLS.
+    if (!rlsRoleChecked) {
+      rlsRoleChecked = true;
+      await warnIfRoleBypassesRls(client);
+    }
 
     // 3. Jalankan logika pemanggil di bawah RLS.
     const result = await fn(client);

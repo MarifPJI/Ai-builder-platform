@@ -20,6 +20,8 @@ import {
   type RawStudentRow,
 } from '@/lib/validation/roster';
 
+import { teacherSchoolId } from './tenant-scope';
+
 export class RosterError extends Error {}
 
 export interface RosterSummary {
@@ -39,13 +41,13 @@ export async function addStudentManual(
   fullName: string,
 ): Promise<void> {
   const valid = studentSchema.parse({ nis, fullName });
-  if (!claims.schoolId) throw new RosterError('Sekolah tidak valid.');
+  const schoolId = teacherSchoolId(claims);
   await withTenantTransaction(claims, async (tx) => {
-    // Pastikan kelas milik tenant (RLS juga menegakkan); insert siswa.
+    // Pastikan kelas milik tenant (RLS + filter school_id eksplisit); insert siswa.
     const ins = await tx.query(
       `INSERT INTO class_students (class_id, school_id, nis, full_name)
-       SELECT c.id, c.school_id, $2, $3 FROM classes c WHERE c.id = $1`,
-      [classId, valid.nis, valid.fullName],
+       SELECT c.id, c.school_id, $2, $3 FROM classes c WHERE c.id = $1 AND c.school_id = $4`,
+      [classId, valid.nis, valid.fullName, schoolId],
     );
     if (ins.rowCount === 0) {
       throw new RosterError('Kelas tidak ditemukan atau tidak berwenang.');
@@ -62,7 +64,7 @@ export async function importRoster(
   classId: string,
   input: RosterInput,
 ): Promise<RosterSummary> {
-  if (!claims.schoolId) throw new RosterError('Sekolah tidak valid.');
+  const schoolId = teacherSchoolId(claims);
 
   const rows: RawStudentRow[] = 'text' in input ? parseRosterText(input.text) : input.rows;
 
@@ -78,7 +80,10 @@ export async function importRoster(
 
   await withTenantTransaction(claims, async (tx) => {
     // Verifikasi kelas milik tenant sekali di awal (RLS + cek eksplisit).
-    const own = await tx.query(`SELECT 1 FROM classes WHERE id = $1`, [classId]);
+    const own = await tx.query(`SELECT 1 FROM classes WHERE id = $1 AND school_id = $2`, [
+      classId,
+      schoolId,
+    ]);
     if (own.rowCount === 0) {
       throw new RosterError('Kelas tidak ditemukan atau tidak berwenang.');
     }
@@ -93,8 +98,8 @@ export async function importRoster(
       try {
         await tx.query(
           `INSERT INTO class_students (class_id, school_id, nis, full_name)
-           SELECT c.id, c.school_id, $2, $3 FROM classes c WHERE c.id = $1`,
-          [classId, parsed.value.nis, parsed.value.fullName],
+           SELECT c.id, c.school_id, $2, $3 FROM classes c WHERE c.id = $1 AND c.school_id = $4`,
+          [classId, parsed.value.nis, parsed.value.fullName, schoolId],
         );
         saved += 1;
       } catch {
@@ -116,11 +121,11 @@ export async function removeStudent(
   classId: string,
   studentId: string,
 ): Promise<void> {
-  if (!claims.schoolId) throw new RosterError('Sekolah tidak valid.');
+  const schoolId = teacherSchoolId(claims);
   await withTenantTransaction(claims, async (tx) => {
     const res = await tx.query(
-      `DELETE FROM class_students WHERE id = $1 AND class_id = $2`,
-      [studentId, classId],
+      `DELETE FROM class_students WHERE id = $1 AND class_id = $2 AND school_id = $3`,
+      [studentId, classId, schoolId],
     );
     if (res.rowCount === 0) {
       throw new RosterError('Siswa tidak ditemukan atau tidak berwenang.');

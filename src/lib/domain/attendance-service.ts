@@ -37,6 +37,8 @@ import {
   type AttendanceStatus,
 } from '@/lib/validation/attendance';
 
+import { teacherSchoolId } from './tenant-scope';
+
 /** Error domain presensi; memisahkan kegagalan domain dari error DB biasa. */
 export class AttendanceError extends Error {
   public constructor(message: string) {
@@ -79,10 +81,11 @@ export async function listAttendance(
   claims: SessionClaims,
   sessionId: string,
 ): Promise<AttendanceRow[]> {
+  const schoolId = teacherSchoolId(claims);
   return withTenantTransaction(claims, async (tx: PoolClient) => {
     const owned = await tx.query(
-      `SELECT 1 FROM class_sessions WHERE id = $1 LIMIT 1`,
-      [sessionId],
+      `SELECT 1 FROM class_sessions WHERE id = $1 AND school_id = $2 LIMIT 1`,
+      [sessionId, schoolId],
     );
     if (owned.rowCount === null || owned.rowCount === 0) {
       throw new AttendanceError('Sesi tidak ditemukan atau bukan milik sekolah Anda.');
@@ -91,12 +94,12 @@ export async function listAttendance(
     const result = await tx.query<AttendanceQueryRow>(
       `SELECT cs.id AS student_id, cs.nis, cs.full_name, sa.status
          FROM class_sessions sess
-         JOIN class_students cs ON cs.class_id = sess.class_id
+         JOIN class_students cs ON cs.class_id = sess.class_id AND cs.school_id = sess.school_id
          LEFT JOIN session_attendance sa
                 ON sa.session_id = sess.id AND sa.student_id = cs.id
-        WHERE sess.id = $1
+        WHERE sess.id = $1 AND sess.school_id = $2
         ORDER BY cs.full_name ASC`,
-      [sessionId],
+      [sessionId, schoolId],
     );
 
     return result.rows.map((row) => ({
@@ -124,11 +127,12 @@ export async function saveAttendance(
   entries: AttendanceEntry[],
 ): Promise<void> {
   const parsed = attendanceEntriesSchema.parse(entries);
+  const schoolId = teacherSchoolId(claims);
 
   await withTenantTransaction(claims, async (tx: PoolClient) => {
     const owned = await tx.query(
-      `SELECT 1 FROM class_sessions WHERE id = $1 LIMIT 1`,
-      [sessionId],
+      `SELECT 1 FROM class_sessions WHERE id = $1 AND school_id = $2 LIMIT 1`,
+      [sessionId, schoolId],
     );
     if (owned.rowCount === null || owned.rowCount === 0) {
       throw new AttendanceError('Sesi tidak ditemukan atau bukan milik sekolah Anda.');
@@ -147,10 +151,11 @@ export async function saveAttendance(
          FROM class_sessions sess
          JOIN unnest($2::uuid[], $3::text[]) AS e(student_id, status) ON TRUE
          JOIN class_students cs ON cs.class_id = sess.class_id AND cs.id = e.student_id
-        WHERE sess.id = $1
+                                AND cs.school_id = sess.school_id
+        WHERE sess.id = $1 AND sess.school_id = $4
        ON CONFLICT (session_id, student_id)
        DO UPDATE SET status = EXCLUDED.status, updated_at = now()`,
-      [sessionId, studentIds, statuses],
+      [sessionId, studentIds, statuses, schoolId],
     );
 
     if (result.rowCount === null || result.rowCount < parsed.length) {
@@ -169,12 +174,15 @@ export async function saveJournal(
   sessionId: string,
   notes: string | null,
 ): Promise<void> {
+  const schoolId = teacherSchoolId(claims);
   await withTenantTransaction(claims, async (tx: PoolClient) => {
     const result = await tx.query(
       `INSERT INTO session_journals (session_id, school_id, notes)
-       SELECT sess.id, sess.school_id, $2 FROM class_sessions sess WHERE sess.id = $1
-       ON CONFLICT (session_id) DO UPDATE SET notes = EXCLUDED.notes, updated_at = now()`,
-      [sessionId, notes],
+       SELECT sess.id, sess.school_id, $2 FROM class_sessions sess
+        WHERE sess.id = $1 AND sess.school_id = $3
+       ON CONFLICT (session_id) DO UPDATE SET notes = EXCLUDED.notes, updated_at = now()
+        WHERE session_journals.school_id = $3`,
+      [sessionId, notes, schoolId],
     );
     if (result.rowCount === null || result.rowCount === 0) {
       throw new AttendanceError('Sesi tidak ditemukan atau bukan milik sekolah Anda.');
@@ -212,11 +220,13 @@ export async function confirmSessionPhoto(
   s3Bucket: string,
   s3Key: string,
 ): Promise<void> {
+  const schoolId = teacherSchoolId(claims);
   await withTenantTransaction(claims, async (tx: PoolClient) => {
     const result = await tx.query(
       `INSERT INTO session_photos (session_id, school_id, s3_bucket, s3_key)
-       SELECT sess.id, sess.school_id, $2, $3 FROM class_sessions sess WHERE sess.id = $1`,
-      [sessionId, s3Bucket, s3Key],
+       SELECT sess.id, sess.school_id, $2, $3 FROM class_sessions sess
+        WHERE sess.id = $1 AND sess.school_id = $4`,
+      [sessionId, s3Bucket, s3Key, schoolId],
     );
     if (result.rowCount === null || result.rowCount === 0) {
       throw new AttendanceError('Sesi tidak ditemukan atau bukan milik sekolah Anda.');

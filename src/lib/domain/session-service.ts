@@ -14,6 +14,8 @@ import type { SessionClaims } from '@/lib/auth/types';
 import { withTenantTransaction } from '@/lib/db/tenant-transaction';
 import { scheduleSessionSchema, type ScheduleSessionInput } from '@/lib/validation/class';
 
+import { teacherSchoolId } from './tenant-scope';
+
 export class SessionError extends Error {}
 
 export interface SessionRow {
@@ -55,9 +57,13 @@ export async function scheduleSession(
   input: ScheduleSessionInput,
 ): Promise<string> {
   const valid = scheduleSessionSchema.parse(input);
+  const schoolId = teacherSchoolId(claims);
   return withTenantTransaction(claims, async (tx) => {
-    // R6.2: class_id harus milik tenant (RLS membatasi SELECT ke school_id Guru).
-    const cls = await tx.query(`SELECT 1 FROM classes WHERE id = $1`, [valid.classId]);
+    // R6.2: class_id harus milik tenant (RLS + filter school_id eksplisit).
+    const cls = await tx.query(`SELECT 1 FROM classes WHERE id = $1 AND school_id = $2`, [
+      valid.classId,
+      schoolId,
+    ]);
     if (cls.rowCount === 0) {
       throw new SessionError('Kelas tidak ditemukan atau bukan milik sekolah Anda.');
     }
@@ -71,9 +77,9 @@ export async function scheduleSession(
     }
     const res = await tx.query<{ id: string }>(
       `INSERT INTO class_sessions (class_id, school_id, material_id, name, scheduled_at)
-       SELECT c.id, c.school_id, $2, $3, $4 FROM classes c WHERE c.id = $1
+       SELECT c.id, c.school_id, $2, $3, $4 FROM classes c WHERE c.id = $1 AND c.school_id = $5
        RETURNING id`,
-      [valid.classId, valid.materialId, valid.name, valid.scheduledAt],
+      [valid.classId, valid.materialId, valid.name, valid.scheduledAt, schoolId],
     );
     const row = res.rows[0];
     if (!row) throw new SessionError('Gagal menjadwalkan sesi.');
@@ -83,12 +89,15 @@ export async function scheduleSession(
 
 /** Daftar Sesi mengajar Guru (R6.5). */
 export async function listSessions(claims: SessionClaims): Promise<SessionRow[]> {
+  const schoolId = teacherSchoolId(claims);
   return withTenantTransaction(claims, async (tx) => {
     const res = await tx.query(
       `SELECT s.id, s.class_id, c.name AS class_name, s.material_id, s.name, s.scheduled_at
          FROM class_sessions s
          JOIN classes c ON c.id = s.class_id
+        WHERE s.school_id = $1 AND c.school_id = $1
         ORDER BY s.scheduled_at DESC`,
+      [schoolId],
     );
     return res.rows.map((r: Record<string, unknown>) => ({
       id: r.id as string,
@@ -108,14 +117,18 @@ export async function listSessions(claims: SessionClaims): Promise<SessionRow[]>
 export async function listSessionsWithStatus(
   claims: SessionClaims,
 ): Promise<SessionWithStatus[]> {
+  const schoolId = teacherSchoolId(claims);
   return withTenantTransaction(claims, async (tx) => {
     const res = await tx.query(
       `SELECT s.id, s.class_id, c.name AS class_name, s.material_id, s.name, s.scheduled_at,
               (s.scheduled_at <= now()) AS is_due,
-              EXISTS(SELECT 1 FROM session_attendance a WHERE a.session_id = s.id) AS has_attendance
+              EXISTS(SELECT 1 FROM session_attendance a
+                      WHERE a.session_id = s.id AND a.school_id = s.school_id) AS has_attendance
          FROM class_sessions s
          JOIN classes c ON c.id = s.class_id
+        WHERE s.school_id = $1 AND c.school_id = $1
         ORDER BY s.scheduled_at DESC`,
+      [schoolId],
     );
     return res.rows.map((r: Record<string, unknown>) => ({
       id: r.id as string,
@@ -135,6 +148,7 @@ export async function listSessionsWithStatus(
  * kelas + ada tidaknya jurnal. Hanya Sesi yang sudah punya presensi.
  */
 export async function listSessionRecap(claims: SessionClaims): Promise<SessionRecap[]> {
+  const schoolId = teacherSchoolId(claims);
   return withTenantTransaction(claims, async (tx) => {
     const res = await tx.query(
       `SELECT s.id AS session_id, s.name, c.name AS class_name, s.scheduled_at,
@@ -142,13 +156,17 @@ export async function listSessionRecap(claims: SessionClaims): Promise<SessionRe
               count(a.*) FILTER (WHERE a.status = 'sakit') AS sakit,
               count(a.*) FILTER (WHERE a.status = 'izin') AS izin,
               count(a.*) FILTER (WHERE a.status = 'alfa') AS alfa,
-              (SELECT count(*) FROM class_students cs WHERE cs.class_id = s.class_id) AS total_siswa,
-              EXISTS(SELECT 1 FROM session_journals j WHERE j.session_id = s.id) AS has_journal
+              (SELECT count(*) FROM class_students cs
+                WHERE cs.class_id = s.class_id AND cs.school_id = s.school_id) AS total_siswa,
+              EXISTS(SELECT 1 FROM session_journals j
+                      WHERE j.session_id = s.id AND j.school_id = s.school_id) AS has_journal
          FROM class_sessions s
          JOIN classes c ON c.id = s.class_id
-         JOIN session_attendance a ON a.session_id = s.id
+         JOIN session_attendance a ON a.session_id = s.id AND a.school_id = s.school_id
+        WHERE s.school_id = $1 AND c.school_id = $1
         GROUP BY s.id, s.name, c.name, s.scheduled_at
         ORDER BY s.scheduled_at DESC`,
+      [schoolId],
     );
     return res.rows.map((r: Record<string, unknown>) => ({
       id: r.session_id as string,
